@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" fill="white"/>
+  <circle cx="400" cy="400" r="200" fill="#FF6B6B" stroke="#E74C3C" stroke-width="8"/>
+  <text x="400" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#2C3E50">简单圆形图案</text>
+</svg>

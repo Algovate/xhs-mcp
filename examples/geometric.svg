@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" fill="white"/>
+  <rect x="200" y="200" width="150" height="150" fill="#4ECDC4" stroke="#34495E" stroke-width="4"/>
+  <rect x="450" y="200" width="150" height="150" fill="#45B7D1" stroke="#34495E" stroke-width="4"/>
+  <rect x="200" y="450" width="150" height="150" fill="#96CEB4" stroke="#34495E" stroke-width="4"/>
+  <rect x="450" y="450" width="150" height="150" fill="#FFEAA7" stroke="#34495E" stroke-width="4"/>
+  <text x="400" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#2C3E50">几何图案</text>
+</svg>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" fill="white"/>
+  <path d="M 0,400 Q 200,300 400,400 T 800,400" stroke="#3498DB" stroke-width="6" fill="none"/>
+  <path d="M 0,400 Q 200,500 400,400 T 800,400" stroke="#E74C3C" stroke-width="6" fill="none"/>
+  <text x="400" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#2C3E50">线条艺术</text>
+</svg>

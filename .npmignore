@@ -1,0 +1,50 @@
+# Source files
+src/
+tsconfig.json
+eslint.config.js
+
+# Development files
+*.log
+*.tgz
+*.tar.gz
+
+# Documentation
+docs/
+
+# Examples
+example-usage.sh
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Node modules (should be excluded by default, but just in case)
+node_modules/
+
+# Test files
+tests/
+test/
+__tests__/
+*.test.ts
+*.spec.ts
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

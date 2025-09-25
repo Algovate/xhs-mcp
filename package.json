@@ -1,0 +1,59 @@
+{
+  "name": "xhs-mcp",
+  "version": "0.6.0",
+  "description": "XiaoHongShu CLI and MCP Server",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "xhs-cli": "dist/cli/xhs-cli.js"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "start:cli": "node dist/cli/xhs-cli.js --help",
+    "dev:cli": "tsx src/cli/xhs-cli.ts --help",
+    "dev:mcp:stdio": "tsx src/cli/xhs-cli.ts mcp --mode stdio",
+    "dev:mcp:http": "tsx src/cli/xhs-cli.ts mcp --mode http",
+    "clean": "rm -rf dist temp_images/*",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts"
+  },
+  "keywords": [
+    "xiaohongshu",
+    "mcp",
+    "model-context-protocol",
+    "automation",
+    "puppeteer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "commander": "^12.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^22.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

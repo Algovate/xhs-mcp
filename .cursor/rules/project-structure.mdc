@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+# XHS MCP Project Structure Guide
+
+This is a **TypeScript-first** XiaoHongShu (XHS) MCP Server and CLI tool project. TypeScript is the primary development language for all components.
+
+## Core Architecture
+
+- **Entry Point**: [src/index.ts](mdc:src/index.ts) - Main CLI entry point with Commander.js
+- **MCP Server**: [src/server/mcp.server.ts](mdc:src/server/mcp.server.ts) - Stdio MCP server implementation
+- **HTTP Server**: [src/server/http.server.ts](mdc:src/server/http.server.ts) - HTTP transport MCP server
+- **Configuration**: [src/lib/shared/config.ts](mdc:src/lib/shared/config.ts) - Centralized config management
+- **Types**: [src/lib/shared/types.ts](mdc:src/lib/shared/types.ts) - Core type definitions
+
+## Service Layer Structure
+
+- **Authentication**: [src/lib/auth/](mdc:src/lib/auth/) - Login/logout/status management
+- **Browser Management**: [src/lib/browser/](mdc:src/lib/browser/) - Puppeteer browser automation
+- **Feeds**: [src/lib/feeds/](mdc:src/lib/feeds/) - Discovery, search, and feed operations
+- **Publishing**: [src/lib/publishing/](mdc:src/lib/publishing/) - Note publishing functionality
+- **Shared**: [src/lib/shared/](mdc:src/lib/shared/) - Common utilities, config, and base services
+
+## Key Files
+
+- **CLI**: [src/cli/xhs-cli.ts](mdc:src/cli/xhs-cli.ts) - Command-line interface
+- **Tool Handlers**: [src/server/handlers/tool.handlers.ts](mdc:src/server/handlers/tool.handlers.ts) - MCP tool implementations
+- **Schemas**: [src/server/schemas/tool.schemas.ts](mdc:src/server/schemas/tool.schemas.ts) - MCP tool/resource schemas
+- **Package Config**: [package.json](mdc:package.json) - Dependencies and scripts
+- **TypeScript Config**: [tsconfig.json](mdc:tsconfig.json) - Compiler configuration
+
+## Build Output
+
+- **Distribution**: `dist/` - Compiled JavaScript and TypeScript declarations
+- **Source Maps**: Generated alongside compiled files for debugging
