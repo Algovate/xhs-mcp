@@ -1,9 +1,3 @@
----
-noteId: "ffda934099cf11f0a2e9ad11c92ec992"
-tags: []
-
----
-
 # xhs-mcp
 
 简体中文 | [English](./README.en.md)
@@ -178,9 +172,3 @@ npx xhs-cli mcp [--mode stdio|http] [--port 3000]
 ## 🙏 致谢
 
 基于 [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp) 重构与扩展（TypeScript、Puppeteer、MCP 优化、日志清理、NPM 发布）。
-
-## 📚 文档
-
-- HTTP Transports：`docs/HTTP_TRANSPORTS.md`
-- 发布功能：`docs/PUBLISH_FEATURES.md`
-- 架构设计：`docs/PUBLISH_ARCHITECTURE.md`

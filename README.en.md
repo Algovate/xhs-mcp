@@ -1,9 +1,3 @@
----
-noteId: "de25fbc0988c11f0a5c2e10de4f705bc"
-tags: []
-
----
-
 # xhs-mcp
 
 English | [简体中文](./README.md)
@@ -113,10 +107,3 @@ npx xhs-cli status
 ## 🙏 Acknowledgments
 
 Based on and extended from [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp) (refactored to TypeScript, improved MCP implementation, log cleanup, published to NPM).
-
-## 📚 Docs
-
-- HTTP Transports: `docs/HTTP_TRANSPORTS.md`
-- Publish Features: `docs/PUBLISH_FEATURES.md`
-- Architecture Design: `docs/PUBLISH_ARCHITECTURE.md`
-
