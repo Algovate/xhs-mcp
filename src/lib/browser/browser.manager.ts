@@ -9,13 +9,21 @@ import { getConfig } from '../shared/config.js';
 import { loadCookies, saveCookies } from '../shared/cookies.js';
 import { logger } from '../shared/logger.js';
 import { sleep } from '../shared/utils.js';
+import { BrowserPoolService, ManagedBrowser } from './browser-pool.service.js';
 
 export class BrowserManager {
   private config: Config;
   private browser: Browser | null = null;
+  private browserPool: BrowserPoolService | null = null;
+  private usePool: boolean = false;
 
-  constructor(config?: Config) {
+  constructor(config?: Config, usePool: boolean = false) {
     this.config = config || getConfig();
+    this.usePool = usePool;
+
+    if (this.usePool) {
+      this.browserPool = new BrowserPoolService(this.config);
+    }
   }
 
   async createPage(
@@ -24,6 +32,12 @@ export class BrowserManager {
     loadCookiesFlag: boolean = true
   ): Promise<Page> {
     try {
+      // Use browser pool if enabled
+      if (this.usePool && this.browserPool) {
+        return await this.createPageFromPool(loadCookiesFlag);
+      }
+
+      // Fallback to traditional browser management
       // Launch browser if not already launched
       if (!this.browser) {
         this.browser = await this.launchBrowser(headless, executablePath);
@@ -45,6 +59,53 @@ export class BrowserManager {
     } catch (error) {
       logger.error(`Browser page creation error: ${error}`);
       throw this.handlePuppeteerError(error as Error, 'create_page');
+    }
+  }
+
+  /**
+   * Create a page using the browser pool
+   */
+  private async createPageFromPool(loadCookiesFlag: boolean = true): Promise<Page> {
+    if (!this.browserPool) {
+      throw new XHSError('Browser pool not initialized', 'BrowserPoolError');
+    }
+
+    const managedBrowser = await this.browserPool.acquireBrowser();
+
+    try {
+      // Create new page from the managed browser context
+      const page = await managedBrowser.context.newPage();
+
+      // Configure page timeouts
+      page.setDefaultTimeout(this.config.browser.defaultTimeout);
+      page.setDefaultNavigationTimeout(this.config.browser.navigationTimeout);
+
+      // Load cookies if requested
+      if (loadCookiesFlag) {
+        await this.loadCookiesIntoPage(page);
+      }
+
+      // Store reference to managed browser for cleanup
+      (page as Page & { _managedBrowser?: ManagedBrowser })._managedBrowser = managedBrowser;
+
+      // Set up page close handler to release browser back to pool
+      page.once('close', async () => {
+        try {
+          await this.browserPool!.releaseBrowser(managedBrowser);
+        } catch (error) {
+          logger.warn(`Error releasing browser back to pool: ${error}`);
+        }
+      });
+
+      return page;
+    } catch (error) {
+      // Release browser back to pool on error
+      try {
+        await this.browserPool.releaseBrowser(managedBrowser);
+      } catch (releaseError) {
+        logger.warn(`Error releasing browser after page creation failure: ${releaseError}`);
+      }
+      throw error;
     }
   }
 
@@ -114,7 +175,7 @@ export class BrowserManager {
   async saveCookiesFromPage(page: Page): Promise<void> {
     try {
       const cookies = await page.cookies();
-      
+
       // Convert Puppeteer cookie format to our format
       const ourCookies: Cookie[] = cookies.map(cookie => ({
         name: cookie.name,
@@ -144,7 +205,7 @@ export class BrowserManager {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        await page.goto(url, { 
+        await page.goto(url, {
           waitUntil,
           timeout: this.config.browser.navigationTimeout
         });
@@ -204,6 +265,18 @@ export class BrowserManager {
   }
 
   async cleanup(): Promise<void> {
+    // Cleanup browser pool if using it
+    if (this.usePool && this.browserPool) {
+      try {
+        await this.browserPool.cleanup();
+      } catch (error) {
+        logger.warn(`Error cleaning up browser pool: ${error}`);
+      } finally {
+        this.browserPool = null;
+      }
+    }
+
+    // Cleanup traditional browser instance
     if (this.browser) {
       try {
         await this.browser.close();
@@ -212,6 +285,37 @@ export class BrowserManager {
       } finally {
         this.browser = null;
       }
+    }
+  }
+
+  /**
+   * Get browser pool statistics (if using pool)
+   */
+  getBrowserPoolStats() {
+    if (this.usePool && this.browserPool) {
+      return this.browserPool.getPoolStats();
+    }
+    return null;
+  }
+
+  /**
+   * Enable browser pooling
+   */
+  enableBrowserPool(): void {
+    if (!this.usePool) {
+      this.usePool = true;
+      this.browserPool = new BrowserPoolService(this.config);
+    }
+  }
+
+  /**
+   * Disable browser pooling
+   */
+  async disableBrowserPool(): Promise<void> {
+    if (this.usePool && this.browserPool) {
+      await this.browserPool.cleanup();
+      this.browserPool = null;
+      this.usePool = false;
     }
   }
 
@@ -256,9 +360,20 @@ export class BrowserManager {
 // Global browser manager instance
 let globalBrowserManager: BrowserManager | null = null;
 
-export function getBrowserManager(): BrowserManager {
+export function getBrowserManager(usePool: boolean = false): BrowserManager {
   if (!globalBrowserManager) {
-    globalBrowserManager = new BrowserManager();
+    globalBrowserManager = new BrowserManager(undefined, usePool);
   }
   return globalBrowserManager;
+}
+
+export function getBrowserManagerWithPool(): BrowserManager {
+  return getBrowserManager(true);
+}
+
+export async function cleanupGlobalBrowserManager(): Promise<void> {
+  if (globalBrowserManager) {
+    await globalBrowserManager.cleanup();
+    globalBrowserManager = null;
+  }
 }

@@ -39,10 +39,10 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
-  function printSuccess(result: any, message?: string): void {
+  function printSuccess(result: unknown, message?: string): void {
     const payload = {
       success: true,
-      message: message ?? result?.message ?? undefined,
+      message: message ?? (result as { message?: string })?.message ?? undefined,
       data: result,
     };
     writeJson(payload, 0);
@@ -233,7 +233,7 @@ async function main(): Promise<void> {
         
         const mediaPaths = opts.media.split(',').map(s => s.trim()).filter(Boolean);
         const result = await publishService.publishContent(
-          opts.type as 'image' | 'video', 
+          opts.type, 
           opts.title, 
           opts.content, 
           mediaPaths, 
@@ -296,14 +296,15 @@ async function main(): Promise<void> {
             console.log(`   ${tool.description}`);
             
             if (opts.detailed) {
-              const required = tool.inputSchema.required || [];
-              const properties = tool.inputSchema.properties || {};
+              const required = tool.inputSchema.required ?? [];
+              const properties = tool.inputSchema.properties ?? {};
               
               if (Object.keys(properties).length > 0) {
                 console.log('   Parameters:');
-                Object.entries(properties).forEach(([key, prop]: [string, any]) => {
+                Object.entries(properties).forEach(([key, prop]: [string, unknown]) => {
                   const requiredMark = required.includes(key) ? ' (required)' : ' (optional)';
-                  console.log(`     - ${key}: ${prop.description || 'No description'}${requiredMark}`);
+                  const propDesc = (prop as { description?: string }).description;
+                  console.log(`     - ${key}: ${propDesc ?? 'No description'}${requiredMark}`);
                 });
               }
             }

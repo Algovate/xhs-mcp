@@ -124,8 +124,8 @@ export class PublishService extends BaseService {
   }
 
   private async checkElementForPatterns(
-    page: Page, 
-    selectors: readonly string[], 
+    page: Page,
+    selectors: readonly string[],
     patterns: readonly string[]
   ): Promise<{ found: boolean; text?: string; element?: any }> {
     for (const selector of selectors) {
@@ -147,14 +147,14 @@ export class PublishService extends BaseService {
     errorMessage: string
   ): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       if (await condition()) {
         return;
       }
       await sleep(checkInterval);
     }
-    
+
     throw new PublishError(errorMessage);
   }
 
@@ -775,11 +775,11 @@ export class PublishService extends BaseService {
       async () => {
         // Check for success indicators
         const successResult = await this.checkElementForPatterns(
-          page, 
-          SELECTORS.SUCCESS_INDICATORS, 
+          page,
+          SELECTORS.SUCCESS_INDICATORS,
           TEXT_PATTERNS.SUCCESS
         );
-        
+
         if (successResult.found) {
           logger.debug(`Found success indicator: ${successResult.text}`);
           await sleep(VIDEO_TIMEOUTS.COMPLETION_CHECK);
@@ -788,11 +788,11 @@ export class PublishService extends BaseService {
 
         // Check for error indicators
         const errorResult = await this.checkElementForPatterns(
-          page, 
-          SELECTORS.ERROR_INDICATORS, 
+          page,
+          SELECTORS.ERROR_INDICATORS,
           TEXT_PATTERNS.ERROR
         );
-        
+
         if (errorResult.found) {
           throw new PublishError(`Video publish failed with error: ${errorResult.text}`);
         }
@@ -806,11 +806,11 @@ export class PublishService extends BaseService {
 
         // Check for processing status
         const processingResult = await this.checkElementForPatterns(
-          page, 
-          SELECTORS.PROCESSING_INDICATORS, 
+          page,
+          SELECTORS.PROCESSING_INDICATORS,
           TEXT_PATTERNS.PROCESSING
         );
-        
+
         isProcessing = processingResult.found;
         if (isProcessing) {
           logger.debug(`Video still processing: ${processingResult.text}`);
@@ -818,22 +818,22 @@ export class PublishService extends BaseService {
 
         // Check for toast messages
         const toastResult = await this.checkElementForPatterns(
-          page, 
-          SELECTORS.TOAST_SELECTORS, 
+          page,
+          SELECTORS.TOAST_SELECTORS,
           TEXT_PATTERNS.SUCCESS
         );
-        
+
         if (toastResult.found) {
           logger.debug(`Found success toast: ${toastResult.text}`);
           return true;
         }
 
         const errorToastResult = await this.checkElementForPatterns(
-          page, 
-          SELECTORS.TOAST_SELECTORS, 
+          page,
+          SELECTORS.TOAST_SELECTORS,
           TEXT_PATTERNS.ERROR
         );
-        
+
         if (errorToastResult.found) {
           throw new PublishError(`Video publish failed: ${errorToastResult.text}`);
         }
@@ -885,7 +885,7 @@ export class PublishService extends BaseService {
 
       try {
         await this.executeVideoPublishWorkflow(page, title, content, resolvedVideoPath, tags);
-        
+
         // Save cookies
         await this.getBrowserManager().saveCookiesFromPage(page);
 
@@ -909,9 +909,9 @@ export class PublishService extends BaseService {
   }
 
   private validateContentInputs(
-    type: 'image' | 'video', 
-    title: string, 
-    content: string, 
+    type: 'image' | 'video',
+    title: string,
+    content: string,
     mediaPaths: string[]
   ): void {
     if (!title?.trim()) {
@@ -950,24 +950,24 @@ export class PublishService extends BaseService {
   }
 
   private async executeVideoPublishWorkflow(
-    page: Page, 
-    title: string, 
-    content: string, 
-    videoPath: string, 
+    page: Page,
+    title: string,
+    content: string,
+    videoPath: string,
     tags: string
   ): Promise<void> {
     // Navigate to video upload page
     await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.creatorVideoPublishUrl);
-    
+
     // Wait for page to load
     await sleep(VIDEO_TIMEOUTS.PAGE_LOAD);
-    
+
     // Switch to video upload tab if needed
     await this.clickVideoUploadTab(page);
-    
+
     // Wait for tab switch to complete
     await sleep(VIDEO_TIMEOUTS.TAB_SWITCH);
-    
+
     // Upload video
     await this.uploadVideo(page, videoPath);
 
@@ -1094,7 +1094,7 @@ export class PublishService extends BaseService {
 
   private async uploadVideo(page: Page, videoPath: string): Promise<void> {
     logger.debug(`Uploading video: ${videoPath}`);
-    
+
     // Find file input element
     const fileInput = await this.findElementBySelectors(page, SELECTORS.FILE_INPUT);
     if (!fileInput) {
@@ -1104,17 +1104,17 @@ export class PublishService extends BaseService {
     try {
       // Wait for the input to be ready
       await sleep(VIDEO_TIMEOUTS.UPLOAD_READY);
-      
+
       // Upload the video file
       await fileInput.uploadFile(videoPath);
       logger.debug('Video file uploaded, waiting for processing...');
-      
+
       // Wait for upload to start and show progress
       await sleep(VIDEO_TIMEOUTS.UPLOAD_START);
-      
+
       // Wait for video processing to complete (this can take a while)
       await this.waitForVideoProcessing(page);
-      
+
     } catch (error) {
       throw new PublishError(`Failed to upload video ${videoPath}: ${error}`);
     }
@@ -1128,11 +1128,11 @@ export class PublishService extends BaseService {
         async () => {
           // Check if processing is complete
           const completeResult = await this.checkElementForPatterns(
-            page, 
-            SELECTORS.COMPLETION_INDICATORS, 
+            page,
+            SELECTORS.COMPLETION_INDICATORS,
             TEXT_PATTERNS.SUCCESS
           );
-          
+
           if (completeResult.found) {
             logger.debug(`Video processing complete: ${completeResult.text}`);
             return true;
@@ -1140,11 +1140,11 @@ export class PublishService extends BaseService {
 
           // Check if still processing
           const processingResult = await this.checkElementForPatterns(
-            page, 
-            SELECTORS.PROCESSING_INDICATORS, 
+            page,
+            SELECTORS.PROCESSING_INDICATORS,
             TEXT_PATTERNS.PROCESSING
           );
-          
+
           if (processingResult.found) {
             logger.debug(`Video processing: ${processingResult.text}`);
             return false; // Still processing, continue waiting

@@ -30,7 +30,7 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
   try {
     // Wait for page to be fully loaded - Puppeteer doesn't have waitForLoadState
     // We'll just wait a bit for the page to settle
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise<void>(resolve => globalThis.setTimeout(resolve, 1000));
   } catch {
     // Ignore load state errors
   }

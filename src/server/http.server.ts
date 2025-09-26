@@ -34,7 +34,7 @@ export class XHSHTTPMCPServer {
     this.toolHandlers = new ToolHandlers();
     this.resourceHandlers = new ResourceHandlers();
     this.app = express();
-    
+
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -42,7 +42,7 @@ export class XHSHTTPMCPServer {
   private setupMiddleware(): void {
     // Parse JSON bodies
     this.app.use(express.json());
-    
+
     // Configure CORS to expose Mcp-Session-Id header for browser-based clients
     this.app.use(cors({
       origin: '*', // Allow all origins - adjust as needed for production
@@ -53,15 +53,15 @@ export class XHSHTTPMCPServer {
   private setupRoutes(): void {
     // Streamable HTTP Transport (Protocol version 2025-03-26)
     this.app.all('/mcp', this.handleStreamableHTTP.bind(this));
-    
+
     // Deprecated HTTP+SSE Transport (Protocol version 2024-11-05)
     this.app.get('/sse', this.handleSSEConnection.bind(this));
     this.app.post('/messages', this.handleSSEMessage.bind(this));
-    
+
     // Health check endpoint
     this.app.get('/health', (req, res) => {
-      res.json({ 
-        status: 'healthy', 
+      res.json({
+        status: 'healthy',
         server: this.config.server.name,
         version: this.config.server.version,
         transports: ['streamable-http', 'sse']
@@ -71,12 +71,12 @@ export class XHSHTTPMCPServer {
 
   private async handleStreamableHTTP(req: express.Request, res: express.Response): Promise<void> {
     console.log(`Received ${req.method} request to /mcp`);
-    
+
     try {
       // Check for existing session ID
       const sessionId = req.headers['mcp-session-id'] as string;
       let transport: StreamableHTTPServerTransport | undefined;
-      
+
       if (sessionId && this.transports.has(sessionId)) {
         const existingTransport = this.transports.get(sessionId);
         if (existingTransport instanceof StreamableHTTPServerTransport) {
@@ -95,19 +95,19 @@ export class XHSHTTPMCPServer {
       } else if (!sessionId && req.method === 'POST' && isInitializeRequest(req.body)) {
         // Create new Streamable HTTP transport
         transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (sessionId) => {
+          sessionIdGenerator: (): string => randomUUID(),
+          onsessioninitialized: (sessionId: string): void => {
             console.log(`StreamableHTTP session initialized with ID: ${sessionId}`);
             this.transports.set(sessionId, transport!);
           },
-          onsessionclosed: (sessionId) => {
+          onsessionclosed: (sessionId: string): void => {
             console.log(`StreamableHTTP session closed: ${sessionId}`);
             this.transports.delete(sessionId);
           }
         });
 
         // Set up onclose handler to clean up transport when closed
-        transport.onclose = () => {
+        transport.onclose = (): void => {
           const sid = transport!.sessionId;
           if (sid && this.transports.has(sid)) {
             console.log(`Transport closed for session ${sid}, removing from transports map`);
@@ -150,11 +150,11 @@ export class XHSHTTPMCPServer {
 
   private async handleSSEConnection(req: express.Request, res: express.Response): Promise<void> {
     console.log('Received GET request to /sse (deprecated SSE transport)');
-    
+
     try {
       const transport = new SSEServerTransport('/messages', res);
       this.transports.set(transport.sessionId, transport);
-      
+
       res.on('close', () => {
         this.transports.delete(transport.sessionId);
       });
@@ -178,10 +178,10 @@ export class XHSHTTPMCPServer {
 
   private async handleSSEMessage(req: express.Request, res: express.Response): Promise<void> {
     const sessionId = req.query.sessionId as string;
-    
+
     try {
       const transport = this.transports.get(sessionId);
-      
+
       if (!transport || !(transport instanceof SSEServerTransport)) {
         res.status(400).json({
           jsonrpc: '2.0',
@@ -259,7 +259,7 @@ export class XHSHTTPMCPServer {
           reject(error);
           return;
         }
-        
+
         console.log(`XHS MCP HTTP Server listening on port ${this.port}`);
         console.log(`
 ==============================================
@@ -268,7 +268,7 @@ SUPPORTED TRANSPORT OPTIONS:
 1. Streamable HTTP (Protocol version: 2025-03-26)
    Endpoint: /mcp
    Methods: GET, POST, DELETE
-   Usage: 
+   Usage:
      - Initialize with POST to /mcp
      - Establish SSE stream with GET to /mcp
      - Send requests with POST to /mcp
@@ -292,7 +292,7 @@ SUPPORTED TRANSPORT OPTIONS:
       // Handle server shutdown
       process.on('SIGINT', async () => {
         console.log('Shutting down HTTP server...');
-        
+
         // Close all active transports to properly clean up resources
         for (const [sessionId, transport] of this.transports) {
           try {
@@ -302,7 +302,7 @@ SUPPORTED TRANSPORT OPTIONS:
             console.error(`Error closing transport for session ${sessionId}:`, error);
           }
         }
-        
+
         this.transports.clear();
         server.close(() => {
           console.log('HTTP server shutdown complete');
@@ -312,7 +312,7 @@ SUPPORTED TRANSPORT OPTIONS:
 
       process.on('SIGTERM', async () => {
         console.log('Shutting down HTTP server...');
-        
+
         // Close all active transports to properly clean up resources
         for (const [sessionId, transport] of this.transports) {
           try {
@@ -322,7 +322,7 @@ SUPPORTED TRANSPORT OPTIONS:
             console.error(`Error closing transport for session ${sessionId}:`, error);
           }
         }
-        
+
         this.transports.clear();
         server.close(() => {
           console.log('HTTP server shutdown complete');
