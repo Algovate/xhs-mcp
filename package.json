@@ -14,7 +14,7 @@
     "docs"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && tsc && chmod +x dist/cli/cli.js",
     "start:cli": "node dist/cli/cli.js --help",
     "dev:cli": "tsx src/cli/cli.ts --help",
     "dev:mcp:stdio": "tsx src/cli/cli.ts mcp --mode stdio",
