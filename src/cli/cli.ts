@@ -26,7 +26,7 @@ async function main(): Promise<void> {
       .trim();
 
     if (/Executable doesn't exist|puppeteer browsers install/i.test(raw)) {
-      return 'Chromium is not installed. Run: npx puppeteer browsers install chrome or xhs-cli browser';
+      return 'Chromium is not installed. Run: npx puppeteer browsers install chrome or xhs-mcp browser';
     }
 
     return condensed || (error instanceof Error ? error.message : String(error));
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   }
 
   program
-    .name('xhs-cli')
+    .name('xhs-mcp')
     .description('XiaoHongShu CLI with subcommands')
     .option('--compact', 'Output compact one-line JSON (no pretty print)')
     .showHelpAfterError();
