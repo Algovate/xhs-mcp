@@ -68,3 +68,7 @@ playwright/.cache/
 cookies.json
 data/
 .specstory/
+
+.cursor/
+.kiro/
+.notebook/
