@@ -2,7 +2,7 @@
 
 简体中文 | [English](./README.en.md)
 
-`xhs-mcp` 提供统一的命令行入口 `xhs-cli`，并内置 MCP 服务器子命令。用于小红书（xiaohongshu.com）的 Model Context Protocol（MCP）服务器与 CLI 工具，支持登录、发布、搜索、推荐等自动化能力（基于 Puppeteer）。
+`xhs-mcp` 提供统一的命令行入口 `xhs-mcp`，并内置 MCP 服务器子命令。用于小红书（xiaohongshu.com）的 Model Context Protocol（MCP）服务器与 CLI 工具，支持登录、发布、搜索、推荐等自动化能力（基于 Puppeteer）。
 
 [![npm version](https://img.shields.io/npm/v/xhs-mcp.svg)](https://www.npmjs.com/package/xhs-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/xhs-mcp.svg)](https://www.npmjs.com/package/xhs-mcp)
@@ -11,8 +11,8 @@
 ## 📦 NPM 信息
 
 - 包名: `xhs-mcp`
-- 运行 CLI（推荐）: `npx xhs-cli <subcommand>`
-- 启动 MCP：`npx xhs-cli mcp [--mode stdio|http] [--port 3000]`
+- 运行 CLI（推荐）: `npx xhs-mcp <subcommand>`
+- 启动 MCP：`npx xhs-mcp mcp [--mode stdio|http] [--port 3000]`
 
 ## ✨ 功能
 
@@ -35,16 +35,16 @@
 ### Stdio 模式（默认）
 
 ```bash
-npx xhs-cli mcp
+npx xhs-mcp mcp
 
 # 调试日志
-XHS_ENABLE_LOGGING=true npx xhs-cli mcp
+XHS_ENABLE_LOGGING=true npx xhs-mcp mcp
 ```
 
 > 首次运行提示：如果未安装 Puppeteer 浏览器，先执行
 >
 > ```bash
-> npx xhs-cli browser    # 自动检查并安装 Chromium，显示可执行路径
+> npx xhs-mcp browser    # 自动检查并安装 Chromium，显示可执行路径
 > # 或
 > npx puppeteer browsers install chrome
 > ```
@@ -64,20 +64,20 @@ XHS_ENABLE_LOGGING=true npx xhs-cli mcp
 验证 MCP 连接：
 
 ```bash
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | npx xhs-cli mcp
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | npx xhs-mcp mcp
 ```
 
 ### HTTP 模式
 
 ```bash
 # 启动 HTTP 服务器（默认端口 3000）
-npx xhs-cli mcp --mode http
+npx xhs-mcp mcp --mode http
 
 # 指定端口
-npx xhs-cli mcp --mode http --port 8080
+npx xhs-mcp mcp --mode http --port 8080
 
 # 调试模式
-XHS_ENABLE_LOGGING=true npx xhs-cli mcp --mode http
+XHS_ENABLE_LOGGING=true npx xhs-mcp mcp --mode http
 ```
 
 HTTP 服务器支持：
@@ -91,30 +91,30 @@ HTTP 服务器支持：
 
 ```bash
 # 认证
-npx xhs-cli login --timeout 120
-npx xhs-cli logout
-npx xhs-cli status
+npx xhs-mcp login --timeout 120
+npx xhs-mcp logout
+npx xhs-mcp status
 
 # 浏览器依赖
-npx xhs-cli browser [--with-deps]  # 检查并安装 Chromium，显示可执行路径
+npx xhs-mcp browser [--with-deps]  # 检查并安装 Chromium，显示可执行路径
 
 # 发现与检索
-npx xhs-cli feeds [-b /path/to/chromium]
-npx xhs-cli search -k 关键字 [-b /path/to/chromium]
-npx xhs-cli note-detail --feed-id <id> --xsec-token <token> [-b /path/to/chromium]
+npx xhs-mcp feeds [-b /path/to/chromium]
+npx xhs-mcp search -k 关键字 [-b /path/to/chromium]
+npx xhs-mcp note-detail --feed-id <id> --xsec-token <token> [-b /path/to/chromium]
 
 # 互动
-npx xhs-cli comment --feed-id <id> --xsec-token <token> -n "Nice!" [-b /path/to/chromium]
+npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!" [-b /path/to/chromium]
 
 # 发布
-npx xhs-cli publish --type image --title 标题 --content 内容 -m path1.jpg,path2.png --tags a,b [-b /path/to/chromium]
-npx xhs-cli publish --type video --title 视频标题 --content 视频描述 -m path/to/video.mp4 --tags a,b [-b /path/to/chromium]
+npx xhs-mcp publish --type image --title 标题 --content 内容 -m path1.jpg,path2.png --tags a,b [-b /path/to/chromium]
+npx xhs-mcp publish --type video --title 视频标题 --content 视频描述 -m path/to/video.mp4 --tags a,b [-b /path/to/chromium]
 
 # 查看可用工具
-npx xhs-cli tools [--detailed] [--json]
+npx xhs-mcp tools [--detailed] [--json]
 
 # 启动 MCP
-npx xhs-cli mcp [--mode stdio|http] [--port 3000]
+npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 ```
 
 ## 🔧 客户端接入（Cursor）
@@ -128,7 +128,7 @@ npx xhs-cli mcp [--mode stdio|http] [--port 3000]
   "mcpServers": {
     "xhs-mcp": {
       "command": "npx",
-      "args": ["xhs-cli", "mcp"],
+      "args": ["xhs-mcp", "mcp"],
       "env": { "XHS_ENABLE_LOGGING": "true" }
     }
   }
@@ -144,7 +144,7 @@ npx xhs-cli mcp [--mode stdio|http] [--port 3000]
   "mcpServers": {
     "xhs-mcp-http": {
       "command": "npx",
-      "args": ["xhs-cli", "mcp", "--mode", "http", "--port", "3000"],
+      "args": ["xhs-mcp", "mcp", "--mode", "http", "--port", "3000"],
       "env": { "XHS_ENABLE_LOGGING": "true" }
     }
   }

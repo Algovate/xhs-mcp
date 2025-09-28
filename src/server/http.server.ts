@@ -44,10 +44,12 @@ export class XHSHTTPMCPServer {
     this.app.use(express.json());
 
     // Configure CORS to expose Mcp-Session-Id header for browser-based clients
-    this.app.use(cors({
-      origin: '*', // Allow all origins - adjust as needed for production
-      exposedHeaders: ['Mcp-Session-Id']
-    }));
+    this.app.use(
+      cors({
+        origin: '*', // Allow all origins - adjust as needed for production
+        exposedHeaders: ['Mcp-Session-Id'],
+      })
+    );
   }
 
   private setupRoutes(): void {
@@ -64,7 +66,7 @@ export class XHSHTTPMCPServer {
         status: 'healthy',
         server: this.config.server.name,
         version: this.config.server.version,
-        transports: ['streamable-http', 'sse']
+        transports: ['streamable-http', 'sse'],
       });
     });
   }
@@ -103,7 +105,7 @@ export class XHSHTTPMCPServer {
           onsessionclosed: (sessionId: string): void => {
             console.log(`StreamableHTTP session closed: ${sessionId}`);
             this.transports.delete(sessionId);
-          }
+          },
         });
 
         // Set up onclose handler to clean up transport when closed

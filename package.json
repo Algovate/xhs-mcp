@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "xhs-cli": "dist/cli/xhs-cli.js"
+    "xhs-mcp": "dist/cli/cli.js"
   },
   "type": "module",
   "files": [
@@ -15,25 +15,44 @@
   ],
   "scripts": {
     "build": "npm run clean && tsc",
-    "start:cli": "node dist/cli/xhs-cli.js --help",
-    "dev:cli": "tsx src/cli/xhs-cli.ts --help",
-    "dev:mcp:stdio": "tsx src/cli/xhs-cli.ts mcp --mode stdio",
-    "dev:mcp:http": "tsx src/cli/xhs-cli.ts mcp --mode http",
+    "start:cli": "node dist/cli/cli.js --help",
+    "dev:cli": "tsx src/cli/cli.ts --help",
+    "dev:mcp:stdio": "tsx src/cli/cli.ts mcp --mode stdio",
+    "dev:mcp:http": "tsx src/cli/cli.ts mcp --mode http",
     "clean": "rm -rf dist temp_images/*",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts"
+    "format:check": "prettier --check src/**/*.ts",
+    "prepublishOnly": "npm run build && npm run lint && npm run format:check",
+    "prepack": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0",
+    "version": "npm run build && git add -A dist",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "xiaohongshu",
+    "xhs",
     "mcp",
     "model-context-protocol",
     "automation",
-    "puppeteer"
+    "puppeteer",
+    "cli",
+    "social-media",
+    "content-publishing",
+    "web-automation",
+    "typescript"
   ],
-  "author": "",
+  "author": "Algovate",
   "license": "MIT",
+  "homepage": "https://github.com/algovate/xhs-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/algovate/xhs-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/algovate/xhs-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/cors": "^2.8.19",

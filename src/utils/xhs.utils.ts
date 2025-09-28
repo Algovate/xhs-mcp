@@ -7,7 +7,8 @@ import { Page } from 'puppeteer';
 export const XHS_HOME_URL = 'https://www.xiaohongshu.com';
 export const XHS_EXPLORE_URL = `${XHS_HOME_URL}/explore`;
 export const XHS_SEARCH_URL = `${XHS_HOME_URL}/search_result`;
-export const XHS_CREATOR_PUBLISH_URL = 'https://creator.xiaohongshu.com/publish/publish?source=official';
+export const XHS_CREATOR_PUBLISH_URL =
+  'https://creator.xiaohongshu.com/publish/publish?source=official';
 export const LOGIN_OK_SELECTOR = '.main-container .user .link-wrapper .channel';
 
 export function makeSearchUrl(keyword: string): string {
@@ -30,7 +31,7 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
   try {
     // Wait for page to be fully loaded - Puppeteer doesn't have waitForLoadState
     // We'll just wait a bit for the page to settle
-    await new Promise<void>(resolve => globalThis.setTimeout(resolve, 1000));
+    await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 1000));
   } catch {
     // Ignore load state errors
   }

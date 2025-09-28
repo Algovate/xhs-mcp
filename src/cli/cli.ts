@@ -21,7 +21,10 @@ async function main(): Promise<void> {
   function formatErrorMessage(error: unknown): string {
     const raw = error instanceof Error ? (error.stack ?? error.message) : String(error);
     const condensed = raw
-      .replace(/[\s\S]*?Looks like Puppeteer[\s\S]*?Please run the following command to download new browsers:[\s\S]*?npx puppeteer browsers install[\s\S]*?(Puppeteer Team[\s\S]*?)*?/m, '')
+      .replace(
+        /[\s\S]*?Looks like Puppeteer[\s\S]*?Please run the following command to download new browsers:[\s\S]*?npx puppeteer browsers install[\s\S]*?(Puppeteer Team[\s\S]*?)*?/m,
+        ''
+      )
       .replace(/[\u2500-\u257F]+/g, '') // box-drawing characters
       .trim();
 
@@ -112,10 +115,10 @@ async function main(): Promise<void> {
         try {
           // Get the executable path before launching
           const executablePath = puppeteer.executablePath();
-          
+
           const browser = await puppeteer.launch({ headless: true });
           await browser.close();
-          
+
           return { canLaunch: true, executablePath };
         } catch {
           return { canLaunch: false };
@@ -124,10 +127,13 @@ async function main(): Promise<void> {
 
       const browserInfo = await canLaunchChromium();
       if (browserInfo.canLaunch) {
-        printSuccess({ 
-          installed: true, 
-          executablePath: browserInfo.executablePath 
-        }, 'Chromium is ready');
+        printSuccess(
+          {
+            installed: true,
+            executablePath: browserInfo.executablePath,
+          },
+          'Chromium is ready'
+        );
         return;
       }
 
@@ -137,11 +143,14 @@ async function main(): Promise<void> {
 
       const afterInstallInfo = await canLaunchChromium();
       if (afterInstallInfo.canLaunch) {
-        printSuccess({ 
-          installed: true, 
-          executablePath: afterInstallInfo.executablePath,
-          exitCode: result.status ?? null 
-        }, 'Chromium installed and ready');
+        printSuccess(
+          {
+            installed: true,
+            executablePath: afterInstallInfo.executablePath,
+            exitCode: result.status ?? null,
+          },
+          'Chromium installed and ready'
+        );
       } else {
         printError(new Error('Failed to install or launch Chromium'));
       }
@@ -188,7 +197,11 @@ async function main(): Promise<void> {
     .action(async (opts: { feedId: string; xsecToken: string; browserPath?: string }) => {
       const feedService = new FeedService(config);
       try {
-        const result = await feedService.getFeedDetail(opts.feedId, opts.xsecToken, opts.browserPath);
+        const result = await feedService.getFeedDetail(
+          opts.feedId,
+          opts.xsecToken,
+          opts.browserPath
+        );
         printSuccess(result);
       } catch (error) {
         printError(error);
@@ -203,15 +216,22 @@ async function main(): Promise<void> {
     .requiredOption('--xsec-token <token>', 'Security token for the feed')
     .requiredOption('-n, --note <text>', 'Comment content')
     .option('-b, --browser-path <path>', 'Custom browser binary path')
-    .action(async (opts: { feedId: string; xsecToken: string; note: string; browserPath?: string }) => {
-      const feedService = new FeedService(config);
-      try {
-        const result = await feedService.commentOnFeed(opts.feedId, opts.xsecToken, opts.note, opts.browserPath);
-        printSuccess(result);
-      } catch (error) {
-        printError(error);
+    .action(
+      async (opts: { feedId: string; xsecToken: string; note: string; browserPath?: string }) => {
+        const feedService = new FeedService(config);
+        try {
+          const result = await feedService.commentOnFeed(
+            opts.feedId,
+            opts.xsecToken,
+            opts.note,
+            opts.browserPath
+          );
+          printSuccess(result);
+        } catch (error) {
+          printError(error);
+        }
       }
-    });
+    );
 
   // Publishing: unified publish command
   program
@@ -220,32 +240,46 @@ async function main(): Promise<void> {
     .requiredOption('-t, --type <type>', 'Content type: "image" for images, "video" for videos')
     .requiredOption('--title <title>', 'Content title (<= 20 chars)')
     .requiredOption('--content <content>', 'Content description (<= 1000 chars)')
-    .requiredOption('-m, --media <paths>', 'Comma-separated media file paths (1-18 images for image posts, exactly 1 video for videos)')
+    .requiredOption(
+      '-m, --media <paths>',
+      'Comma-separated media file paths (1-18 images for image posts, exactly 1 video for videos)'
+    )
     .option('--tags <tags>', 'Comma-separated tags')
     .option('-b, --browser-path <path>', 'Custom browser binary path')
-    .action(async (opts: { type: string; title: string; content: string; media: string; tags?: string; browserPath?: string }) => {
-      const publishService = new PublishService(config);
-      try {
-        if (opts.type !== 'image' && opts.type !== 'video') {
-          printError(new Error('Type must be "image" or "video"'));
-          return;
-        }
-        
-        const mediaPaths = opts.media.split(',').map(s => s.trim()).filter(Boolean);
-        const result = await publishService.publishContent(
-          opts.type, 
-          opts.title, 
-          opts.content, 
-          mediaPaths, 
-          opts.tags, 
-          opts.browserPath
-        );
-        printSuccess(result);
-      } catch (error) {
-        printError(error);
-      }
-    });
+    .action(
+      async (opts: {
+        type: string;
+        title: string;
+        content: string;
+        media: string;
+        tags?: string;
+        browserPath?: string;
+      }) => {
+        const publishService = new PublishService(config);
+        try {
+          if (opts.type !== 'image' && opts.type !== 'video') {
+            printError(new Error('Type must be "image" or "video"'));
+            return;
+          }
 
+          const mediaPaths = opts.media
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const result = await publishService.publishContent(
+            opts.type,
+            opts.title,
+            opts.content,
+            mediaPaths,
+            opts.tags,
+            opts.browserPath
+          );
+          printSuccess(result);
+        } catch (error) {
+          printError(error);
+        }
+      }
+    );
 
   program
     .command('mcp')
@@ -277,28 +311,28 @@ async function main(): Promise<void> {
     .action(async (opts: { json?: boolean; detailed?: boolean }) => {
       try {
         const toolSchemas = XHS_TOOL_SCHEMAS;
-        
+
         if (opts.json) {
           if (opts.detailed) {
             console.log(JSON.stringify(toolSchemas, null, 2));
           } else {
-            const toolNames = toolSchemas.map(tool => ({
+            const toolNames = toolSchemas.map((tool) => ({
               name: tool.name,
-              description: tool.description
+              description: tool.description,
             }));
             console.log(JSON.stringify(toolNames, null, 2));
           }
         } else {
           console.log('\n📋 Available MCP Tools:\n');
-          
+
           toolSchemas.forEach((tool, index) => {
             console.log(`${index + 1}. ${tool.name}`);
             console.log(`   ${tool.description}`);
-            
+
             if (opts.detailed) {
               const required = tool.inputSchema.required ?? [];
               const properties = tool.inputSchema.properties ?? {};
-              
+
               if (Object.keys(properties).length > 0) {
                 console.log('   Parameters:');
                 Object.entries(properties).forEach(([key, prop]: [string, unknown]) => {
@@ -310,7 +344,7 @@ async function main(): Promise<void> {
             }
             console.log('');
           });
-          
+
           console.log(`Total: ${toolSchemas.length} tools available`);
           console.log('\nUse --detailed for parameter information');
           console.log('Use --json for machine-readable output');

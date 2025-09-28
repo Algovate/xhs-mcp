@@ -2,7 +2,7 @@
 
 English | [简体中文](./README.md)
 
-Unified CLI `xhs-cli` with built-in MCP server subcommand. Automate XiaoHongShu (xiaohongshu.com) with Puppeteer: login, publishing, search, feed discovery, and commenting via MCP and CLI.
+Unified CLI `xhs-mcp` with built-in MCP server subcommand. Automate XiaoHongShu (xiaohongshu.com) with Puppeteer: login, publishing, search, feed discovery, and commenting via MCP and CLI.
 
 [![npm version](https://img.shields.io/npm/v/xhs-mcp.svg)](https://www.npmjs.com/package/xhs-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/xhs-mcp.svg)](https://www.npmjs.com/package/xhs-mcp)
@@ -11,8 +11,8 @@ Unified CLI `xhs-cli` with built-in MCP server subcommand. Automate XiaoHongShu 
 ## 📦 NPM
 
 - Package: `xhs-mcp`
-- Run CLI: `npx xhs-cli <subcommand>`
-- Start MCP: `npx xhs-cli mcp [--mode stdio|http] [--port 3000]`
+- Run CLI: `npx xhs-mcp <subcommand>`
+- Start MCP: `npx xhs-mcp mcp [--mode stdio|http] [--port 3000]`
 
 ## ✨ Features
 
@@ -33,16 +33,16 @@ Unified CLI `xhs-cli` with built-in MCP server subcommand. Automate XiaoHongShu 
 ## 🚀 Quick Start (MCP)
 
 ```bash
-npx xhs-cli mcp
+npx xhs-mcp mcp
 
 # Debug logs
-XHS_ENABLE_LOGGING=true npx xhs-cli mcp
+XHS_ENABLE_LOGGING=true npx xhs-mcp mcp
 ```
 
 > First run tip: if Puppeteer browsers are not installed yet, run
 >
 > ```bash
-> npx xhs-cli browser    # auto-check and install Chromium, shows executable path
+> npx xhs-mcp browser    # auto-check and install Chromium, shows executable path
 > # or
 > npx puppeteer browsers install chrome
 > ```
@@ -62,24 +62,24 @@ XHS_ENABLE_LOGGING=true npx xhs-cli mcp
 Verify MCP connection:
 
 ```bash
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | npx xhs-cli mcp
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | npx xhs-mcp mcp
 ```
 
 ## 🧰 CLI
 
 ```bash
-npx xhs-cli login --timeout 120
-npx xhs-cli logout
-npx xhs-cli status
- npx xhs-cli browser  # check and install Chromium, shows executable path
- npx xhs-cli feeds
- npx xhs-cli search -k keyword
- npx xhs-cli note-detail --feed-id <id> --xsec-token <token>
- npx xhs-cli comment --feed-id <id> --xsec-token <token> -n "Nice!"
- npx xhs-cli publish --type image --title Title --content Content -m path1.jpg,path2.png --tags a,b
- npx xhs-cli publish --type video --title Title --content Content -m video.mp4 --tags a,b
- npx xhs-cli tools [--detailed] [--json]
- npx xhs-cli mcp --mode http --port 3000
+npx xhs-mcp login --timeout 120
+npx xhs-mcp logout
+npx xhs-mcp status
+ npx xhs-mcp browser  # check and install Chromium, shows executable path
+ npx xhs-mcp feeds
+ npx xhs-mcp search -k keyword
+ npx xhs-mcp note-detail --feed-id <id> --xsec-token <token>
+ npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!"
+ npx xhs-mcp publish --type image --title Title --content Content -m path1.jpg,path2.png --tags a,b
+ npx xhs-mcp publish --type video --title Title --content Content -m video.mp4 --tags a,b
+ npx xhs-mcp tools [--detailed] [--json]
+ npx xhs-mcp mcp --mode http --port 3000
 ```
 
 ## 🔧 Client Integration (Cursor)
@@ -91,7 +91,7 @@ npx xhs-cli status
   "mcpServers": {
     "xhs-mcp": {
       "command": "npx",
-      "args": ["xhs-cli", "mcp"],
+      "args": ["xhs-mcp", "mcp"],
       "env": { "XHS_ENABLE_LOGGING": "true" }
     }
   }
