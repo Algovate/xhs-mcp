@@ -27,7 +27,7 @@
     "prepublishOnly": "npm run build && npm run lint && npm run format:check",
     "prepack": "npm run build",
     "test": "echo \"No tests specified\" && exit 0",
-    "version": "npm run build && git add -A dist",
+    "version": "npm run build",
     "postversion": "git push && git push --tags"
   },
   "keywords": [
