@@ -1,36 +1,29 @@
 ---
 alwaysApply: true
+description: Project structure overview and key entry points for XHS MCP
 ---
+# Project Structure Guide
 
-# XHS MCP Project Structure Guide
+Main entrypoints and key modules:
 
-This is a **TypeScript-first** XiaoHongShu (XHS) MCP Server and CLI tool project. TypeScript is the primary development language for all components.
+- CLI: [src/cli/cli.ts](mdc:src/cli/cli.ts)
+- Library index: [src/index.ts](mdc:src/index.ts)
+- MCP server bootstrap: [src/server/mcp.server.ts](mdc:src/server/mcp.server.ts)
+- HTTP server: [src/server/http.server.ts](mdc:src/server/http.server.ts)
+- Server handlers: [src/server/handlers/index.ts](mdc:src/server/handlers/index.ts)
+- Core services: [src/core/index.ts](mdc:src/core/index.ts)
+- Shared utilities and types: [src/shared/index.ts](mdc:src/shared/index.ts), [src/shared/types.ts](mdc:src/shared/types.ts)
+- Configuration manager: [src/shared/config.ts](mdc:src/shared/config.ts)
+- Logger: [src/shared/logger.ts](mdc:src/shared/logger.ts)
 
-## Core Architecture
+Build and configuration:
 
-- **Entry Point**: [src/index.ts](mdc:src/index.ts) - Main CLI entry point with Commander.js
-- **MCP Server**: [src/server/mcp.server.ts](mdc:src/server/mcp.server.ts) - Stdio MCP server implementation
-- **HTTP Server**: [src/server/http.server.ts](mdc:src/server/http.server.ts) - HTTP transport MCP server
-- **Configuration**: [src/lib/shared/config.ts](mdc:src/lib/shared/config.ts) - Centralized config management
-- **Types**: [src/lib/shared/types.ts](mdc:src/lib/shared/types.ts) - Core type definitions
+- TypeScript config: [config/tsconfig.json](mdc:config/tsconfig.json)
+- Webpack configs: [config/webpack.config.js](mdc:config/webpack.config.js), [config/webpack.dev.config.js](mdc:config/webpack.dev.config.js), [config/webpack.optimized.config.js](mdc:config/webpack.optimized.config.js)
+- ESLint config: [config/eslint.config.js](mdc:config/eslint.config.js)
 
-## Service Layer Structure
+Output artifacts:
 
-- **Authentication**: [src/lib/auth/](mdc:src/lib/auth/) - Login/logout/status management
-- **Browser Management**: [src/lib/browser/](mdc:src/lib/browser/) - Puppeteer browser automation
-- **Feeds**: [src/lib/feeds/](mdc:src/lib/feeds/) - Discovery, search, and feed operations
-- **Publishing**: [src/lib/publishing/](mdc:src/lib/publishing/) - Note publishing functionality
-- **Shared**: [src/lib/shared/](mdc:src/lib/shared/) - Common utilities, config, and base services
+- Compiled CLI bundle: [dist/xhs-cli.js](mdc:dist/xhs-cli.js)
+- Vendor chunk: [dist/942.js](mdc:dist/942.js)
 
-## Key Files
-
-- **CLI**: [src/cli/xhs-cli.ts](mdc:src/cli/xhs-cli.ts) - Command-line interface
-- **Tool Handlers**: [src/server/handlers/tool.handlers.ts](mdc:src/server/handlers/tool.handlers.ts) - MCP tool implementations
-- **Schemas**: [src/server/schemas/tool.schemas.ts](mdc:src/server/schemas/tool.schemas.ts) - MCP tool/resource schemas
-- **Package Config**: [package.json](mdc:package.json) - Dependencies and scripts
-- **TypeScript Config**: [tsconfig.json](mdc:tsconfig.json) - Compiler configuration
-
-## Build Output
-
-- **Distribution**: `dist/` - Compiled JavaScript and TypeScript declarations
-- **Source Maps**: Generated alongside compiled files for debugging
