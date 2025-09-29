@@ -3,13 +3,13 @@
  */
 
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { Config, Cookie } from '../shared/types.js';
-import { BrowserLaunchError, BrowserNavigationError, XHSError } from '../shared/errors.js';
-import { getConfig } from '../shared/config.js';
-import { loadCookies, saveCookies } from '../shared/cookies.js';
-import { logger } from '../shared/logger.js';
-import { sleep } from '../shared/utils.js';
-import { BrowserPoolService, ManagedBrowser } from './browser-pool.service.js';
+import { Config, Cookie } from '../../shared/types';
+import { BrowserLaunchError, BrowserNavigationError, XHSError } from '../../shared/errors';
+import { getConfig } from '../../shared/config';
+import { loadCookies, saveCookies } from '../../shared/cookies';
+import { logger } from '../../shared/logger';
+import { sleep } from '../../shared/utils';
+import { BrowserPoolService, ManagedBrowser } from './browser-pool.service';
 
 export class BrowserManager {
   private config: Config;

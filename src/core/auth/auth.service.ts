@@ -2,13 +2,13 @@
  * Authentication service for XHS MCP Server
  */
 
-import { Config, LoginResult, StatusResult } from '../shared/types.js';
-import { LoginTimeoutError, LoginFailedError, NotLoggedInError, XHSError } from '../shared/errors.js';
-import { BaseService } from '../shared/base.service.js';
-import { deleteCookiesFile, getCookiesInfo } from '../shared/cookies.js';
-import { isLoggedIn } from '../../utils/xhs.utils.js';
-import { logger } from '../shared/logger.js';
-import { sleep } from '../shared/utils.js';
+import { Config, LoginResult, StatusResult } from '../../shared/types';
+import { LoginTimeoutError, LoginFailedError, NotLoggedInError, XHSError } from '../../shared/errors';
+import { BaseService } from '../../shared/base.service';
+import { deleteCookiesFile, getCookiesInfo } from '../../shared/cookies';
+import { isLoggedIn } from '../../shared/xhs.utils';
+import { logger } from '../../shared/logger';
+import { sleep } from '../../shared/utils';
 
 export class AuthService extends BaseService {
   constructor(config: Config) {

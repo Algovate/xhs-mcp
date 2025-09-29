@@ -2,13 +2,13 @@
  * Tool request handlers for XHS MCP Server
  */
 
-import { AuthService } from '../../lib/auth/auth.service.js';
-import { FeedService } from '../../lib/feeds/feed.service.js';
-import { PublishService } from '../../lib/publishing/publish.service.js';
-import { getConfig } from '../../lib/shared/config.js';
-import { XHSError } from '../../lib/shared/errors.js';
-import { validateRequiredParams, validatePublishNoteParams, safeErrorHandler, createToolResponse, createErrorResponse } from '../../lib/shared/utils.js';
-import { logger } from '../../lib/shared/logger.js';
+import { AuthService } from '../../core/auth/auth.service';
+import { FeedService } from '../../core/feeds/feed.service';
+import { PublishService } from '../../core/publishing/publish.service';
+import { getConfig } from '../../shared/config';
+import { XHSError } from '../../shared/errors';
+import { validateRequiredParams, validatePublishNoteParams, safeErrorHandler, createToolResponse, createErrorResponse } from '../../shared/utils';
+import { logger } from '../../shared/logger';
 
 export class ToolHandlers {
   private authService: AuthService;

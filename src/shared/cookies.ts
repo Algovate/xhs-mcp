@@ -2,12 +2,12 @@
  * Cookie management for XHS MCP Server
  */
 
-import { Cookie, CookiesInfo } from './types.js';
-import { XHSError } from './errors.js';
-import { getConfig } from './config.js';
+import { Cookie, CookiesInfo } from './types';
+import { XHSError } from './errors';
+import { getConfig } from './config';
 import { readFileSync, writeFileSync, existsSync, unlinkSync, statSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
-import { logger } from './logger.js';
+import { logger } from './logger';
 
 export function getCookiesFilePath(): string {
   return getConfig().paths.cookiesFile;

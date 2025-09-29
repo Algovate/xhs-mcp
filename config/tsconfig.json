@@ -4,8 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "../dist",
+    "rootDir": "../src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,14 +17,19 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"]
+    "types": ["node"],
+    "isolatedModules": true,
+    "noEmit": false,
+    "preserveConstEnums": true,
+    "removeComments": false
   },
   "include": [
-    "src/**/*"
+    "../src/**/*"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
-    "tests"
+    "../node_modules",
+    "../dist",
+    "../tests",
+    "webpack*.js"
   ]
 }

@@ -5,14 +5,14 @@
  */
 
 import { Command } from 'commander';
-import { getConfig } from '../lib/shared/config.js';
-import { AuthService } from '../lib/auth/auth.service.js';
+import { getConfig } from '../shared/config';
+import { AuthService } from '../core/auth/auth.service';
 import puppeteer from 'puppeteer';
 import { spawnSync } from 'node:child_process';
-import { XHSMCPServer, XHSHTTPMCPServer } from '../server/index.js';
-import { XHS_TOOL_SCHEMAS } from '../server/schemas/tool.schemas.js';
-import { FeedService } from '../lib/feeds/feed.service.js';
-import { PublishService } from '../lib/publishing/publish.service.js';
+import { XHSMCPServer, XHSHTTPMCPServer } from '../server/index';
+import { XHS_TOOL_SCHEMAS } from '../server/schemas/tool.schemas';
+import { FeedService } from '../core/feeds/feed.service';
+import { PublishService } from '../core/publishing/publish.service';
 
 async function main(): Promise<void> {
   const config = getConfig();
@@ -293,12 +293,17 @@ async function main(): Promise<void> {
           const httpServer = new XHSHTTPMCPServer(port);
           await httpServer.start();
         } else {
+          // In stdio mode, we must not output anything to stdout/stderr except MCP protocol messages
+          // This prevents interference with MCP communication
           const server = new XHSMCPServer();
           await server.start();
         }
       } catch (error) {
-        // Avoid polluting stdio mode; only emit minimal error info
-        printError(error);
+        // Only log to stderr if logging is explicitly enabled
+        if (process.env.XHS_ENABLE_LOGGING === 'true') {
+          process.stderr.write(`Server failed to start: ${error}\n`);
+        }
+        process.exit(1);
       }
     });
 
@@ -357,4 +362,22 @@ async function main(): Promise<void> {
   program.parseAsync(process.argv);
 }
 
-main();
+// Handle graceful shutdown for MCP server mode
+process.on('SIGINT', () => {
+  // Don't log to stderr in stdio mode to avoid interfering with MCP protocol
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  // Don't log to stderr in stdio mode to avoid interfering with MCP protocol
+  process.exit(0);
+});
+
+// Start the CLI
+main().catch((error) => {
+  // Only log to stderr if logging is explicitly enabled
+  if (process.env.XHS_ENABLE_LOGGING === 'true') {
+    process.stderr.write(`Fatal error: ${error}\n`);
+  }
+  process.exit(1);
+});

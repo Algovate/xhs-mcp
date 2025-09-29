@@ -3,7 +3,7 @@
  */
 
 import { Browser, BrowserContext, Page } from 'puppeteer';
-import { Config, Cookie } from '../shared/types';
+import { Config, Cookie } from '../../shared/types';
 
 export interface BrowserManagerConfig {
   config: Config;

@@ -4,11 +4,11 @@
  */
 
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer';
-import { Config } from '../shared/types.js';
-import { BrowserLaunchError, XHSError } from '../shared/errors.js';
-import { getConfig } from '../shared/config.js';
-import { logger } from '../shared/logger.js';
-import { sleep } from '../shared/utils.js';
+import { Config } from '../../shared/types';
+import { BrowserLaunchError, XHSError } from '../../shared/errors';
+import { getConfig } from '../../shared/config';
+import { logger } from '../../shared/logger';
+import { sleep } from '../../shared/utils';
 
 export interface ManagedBrowser {
   browser: Browser;

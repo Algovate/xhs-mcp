@@ -8,6 +8,15 @@ yarn-error.log*
 dist/
 build/
 
+# Webpack
+webpack-stats.json
+webpack-bundle-analyzer-report.html
+
+# Temporary files
+temp_images/
+*.tmp
+*.temp
+
 # Environment variables
 .env
 .env.local

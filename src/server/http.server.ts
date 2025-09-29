@@ -9,10 +9,10 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import { getConfig } from '../lib/shared/config.js';
-import { ToolHandlers } from './handlers/tool.handlers.js';
-import { ResourceHandlers } from './handlers/resource.handlers.js';
-import { XHS_TOOL_SCHEMAS, XHS_RESOURCE_SCHEMAS } from './schemas/tool.schemas.js';
+import { getConfig } from '../shared/config';
+import { ToolHandlers } from './handlers/tool.handlers';
+import { ResourceHandlers } from './handlers/resource.handlers';
+import { XHS_TOOL_SCHEMAS, XHS_RESOURCE_SCHEMAS } from './schemas/tool.schemas';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,

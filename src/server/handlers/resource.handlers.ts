@@ -2,8 +2,8 @@
  * Resource request handlers for XHS MCP Server
  */
 
-import { AuthService } from '../../lib/auth/auth.service.js';
-import { getConfig, getCookiesInfo } from '../../lib/shared/index.js';
+import { AuthService } from '../../core/auth/auth.service';
+import { getConfig, getCookiesInfo } from '../../shared/index';
 
 export class ResourceHandlers {
   private authService: AuthService;

@@ -2,7 +2,7 @@
  * Feed-related types for XHS MCP Server
  */
 
-import { FeedItem, FeedListResult, SearchResult, FeedDetailResult, CommentResult } from '../shared/types';
+import { FeedItem, FeedListResult, SearchResult, FeedDetailResult, CommentResult } from '../../shared/types';
 
 export interface FeedServiceConfig {
   config: any; // Will be properly typed when we import Config

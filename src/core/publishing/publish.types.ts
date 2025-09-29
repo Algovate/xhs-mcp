@@ -2,7 +2,7 @@
  * Publishing-related types for XHS MCP Server
  */
 
-import { PublishResult } from '../shared/types';
+import { PublishResult } from '../../shared/types';
 
 export interface PublishServiceConfig {
   config: any; // Will be properly typed when we import Config

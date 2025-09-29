@@ -2,7 +2,7 @@
  * Configuration management for XHS MCP Server
  */
 
-import { Config, BrowserConfig, ServerConfig, LoggingConfig, PathsConfig, XHSConfig } from './types.js';
+import { Config, BrowserConfig, ServerConfig, LoggingConfig, PathsConfig, XHSConfig } from './types';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { readFileSync } from 'fs';

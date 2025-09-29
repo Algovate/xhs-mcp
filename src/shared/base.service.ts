@@ -2,8 +2,8 @@
  * Base service class for XHS MCP Server services
  */
 
-import { Config } from './types.js';
-import { BrowserManager } from '../browser/browser.manager.js';
+import { Config } from './types';
+import { BrowserManager } from '../core/browser/browser.manager';
 
 /**
  * Base service class that provides common functionality for all services

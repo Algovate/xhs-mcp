@@ -2,12 +2,12 @@
  * Feed operations service for XHS MCP Server
  */
 
-import { Config, FeedListResult, SearchResult, FeedDetailResult, CommentResult, FeedItem } from '../shared/types.js';
-import { FeedError, FeedParsingError, FeedNotFoundError, NotLoggedInError, XHSError } from '../shared/errors.js';
-import { BaseService } from '../shared/base.service.js';
-import { makeSearchUrl, makeFeedDetailUrl, extractInitialState, isLoggedIn } from '../../utils/xhs.utils.js';
-import { logger } from '../shared/logger.js';
-import { sleep } from '../shared/utils.js';
+import { Config, FeedListResult, SearchResult, FeedDetailResult, CommentResult, FeedItem } from '../../shared/types';
+import { FeedError, FeedParsingError, FeedNotFoundError, NotLoggedInError, XHSError } from '../../shared/errors';
+import { BaseService } from '../../shared/base.service';
+import { makeSearchUrl, makeFeedDetailUrl, extractInitialState, isLoggedIn } from '../../shared/xhs.utils';
+import { logger } from '../../shared/logger';
+import { sleep } from '../../shared/utils';
 
 export class FeedService extends BaseService {
   constructor(config: Config) {
