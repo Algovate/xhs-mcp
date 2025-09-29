@@ -49,7 +49,6 @@ export function saveCookies(cookies: Cookie[]): void {
     // Save cookies with pretty formatting
     const content = JSON.stringify(cookies, null, 2);
     writeFileSync(path, content, 'utf-8');
-
   } catch (error) {
     logger.error(`Failed to save cookies to ${path}: ${error}`);
     throw new XHSError(`Failed to save cookies: ${error}`, 'CookieSaveError', {}, error as Error);

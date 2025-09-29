@@ -2,7 +2,14 @@
  * Configuration management for XHS MCP Server
  */
 
-import { Config, BrowserConfig, ServerConfig, LoggingConfig, PathsConfig, XHSConfig } from './types';
+import {
+  Config,
+  BrowserConfig,
+  ServerConfig,
+  LoggingConfig,
+  PathsConfig,
+  XHSConfig,
+} from './types';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { readFileSync } from 'fs';
@@ -90,7 +97,8 @@ export class ConfigManager {
       exploreUrl: 'https://www.xiaohongshu.com/explore',
       searchUrl: 'https://www.xiaohongshu.com/search_result',
       creatorPublishUrl: 'https://creator.xiaohongshu.com/publish/publish?source=official',
-      creatorVideoPublishUrl: 'https://creator.xiaohongshu.com/publish/publish?source=official&from=tab_switch&target=video',
+      creatorVideoPublishUrl:
+        'https://creator.xiaohongshu.com/publish/publish?source=official&from=tab_switch&target=video',
       loginOkSelector: '.main-container .user .link-wrapper .channel',
       requestDelay: 1.0,
       maxRetries: 3,

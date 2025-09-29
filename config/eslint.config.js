@@ -11,7 +11,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.json',
+        project: './config/tsconfig.json',
       },
         globals: {
           console: 'readonly',
@@ -24,6 +24,10 @@ export default [
           require: 'readonly',
           exports: 'readonly',
           URLSearchParams: 'readonly',
+          setTimeout: 'readonly',
+          clearTimeout: 'readonly',
+          setInterval: 'readonly',
+          clearInterval: 'readonly',
         },
     },
     plugins: {

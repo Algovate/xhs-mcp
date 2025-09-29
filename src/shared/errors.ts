@@ -17,8 +17,8 @@ export class XHSError extends Error {
   ) {
     super(message);
     this.name = 'XHSError';
-    this.errorCode = errorCode || this.constructor.name;
-    this.context = context || {};
+    this.errorCode = errorCode ?? this.constructor.name;
+    this.context = context ?? {};
     this.originalError = originalError;
   }
 
