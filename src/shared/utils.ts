@@ -20,7 +20,7 @@ export function sleep(ms: number): Promise<void> {
 export function safeErrorHandler(
   error: unknown,
   context: string,
-  logger: { error: (message: string, ...args: any[]) => void }
+  logger: { error: (message: string, ...args: unknown[]) => void }
 ): void {
   const errorMessage = error instanceof Error ? error.message : String(error);
   logger.error(`${context}: ${errorMessage}`);
@@ -32,7 +32,10 @@ export function safeErrorHandler(
  * @param requiredKeys - Array of required parameter keys
  * @throws Error if any required parameter is missing
  */
-export function validateRequiredParams(params: Record<string, any>, requiredKeys: string[]): void {
+export function validateRequiredParams(
+  params: Record<string, unknown>,
+  requiredKeys: string[]
+): void {
   const missingKeys = requiredKeys.filter(
     (key) => params[key] === undefined || params[key] === null || params[key] === ''
   );
@@ -76,7 +79,7 @@ export function validatePublishNoteParams(title: string, note: string, imagePath
  * @param error - Optional error information
  * @returns Standardized response object
  */
-export function createResponse<T = any>(
+export function createResponse<T = unknown>(
   success: boolean,
   data?: T,
   message?: string,
@@ -128,7 +131,7 @@ export async function retryWithBackoff<T>(
  * @param data - Data to include in the response
  * @returns Standardized MCP response format
  */
-export function createToolResponse<T = any>(
+export function createToolResponse<T = unknown>(
   data: T
 ): { content: Array<{ type: string; text: string }> } {
   return {

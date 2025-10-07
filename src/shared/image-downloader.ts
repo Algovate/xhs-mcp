@@ -54,7 +54,7 @@ export class ImageDownloader {
     // Use SHA256 hash of URL for uniqueness
     const hash = createHash('sha256').update(imageUrl).digest('hex');
     const shortHash = hash.substring(0, 16);
-    
+
     // Try to extract extension from URL
     let extension = 'jpg'; // default
     try {
@@ -64,7 +64,7 @@ export class ImageDownloader {
       if (match) {
         extension = match[1];
       }
-    } catch (e) {
+    } catch {
       // Use default extension
     }
 
@@ -87,12 +87,7 @@ export class ImageDownloader {
     }
 
     // PNG
-    if (
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47
-    ) {
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
       return { isValid: true, extension: 'png' };
     }
 
@@ -217,13 +212,10 @@ export class ImageDownloader {
       // Validate it's actually an image
       const validation = this.validateImageData(buffer);
       if (!validation.isValid) {
-        throw new InvalidImageError(
-          `Downloaded file is not a valid image: ${imageUrl}`,
-          {
-            url: imageUrl,
-            suggestion: 'Make sure the URL points to an actual image file',
-          }
-        );
+        throw new InvalidImageError(`Downloaded file is not a valid image: ${imageUrl}`, {
+          url: imageUrl,
+          suggestion: 'Make sure the URL points to an actual image file',
+        });
       }
 
       // Save to file
@@ -243,7 +235,7 @@ export class ImageDownloader {
       }
 
       // Handle abort error
-      if ((error as any).name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new InvalidImageError(
           `Image download timeout after ${this.timeout}ms: ${imageUrl}`,
           {
@@ -251,7 +243,7 @@ export class ImageDownloader {
             timeout: this.timeout,
             suggestion: 'The image may be too large or the network is slow',
           },
-          error as Error
+          error
         );
       }
 
@@ -281,9 +273,9 @@ export class ImageDownloader {
 
     results.forEach((result) => {
       if ('error' in result) {
-        errors.push(result as any);
+        errors.push({ url: result.url, error: result.error as Error });
       } else {
-        successResults.push(result as DownloadResult);
+        successResults.push(result);
       }
     });
 
@@ -337,9 +329,7 @@ export class ImageDownloader {
       // Log download summary
       const cachedCount = downloadResults.filter((r) => r.cached).length;
       const newCount = downloadResults.filter((r) => !r.cached).length;
-      logger.debug(
-        `Downloaded ${newCount} new images, used ${cachedCount} cached images`
-      );
+      logger.debug(`Downloaded ${newCount} new images, used ${cachedCount} cached images`);
     }
 
     if (localPaths.length === 0) {
@@ -369,4 +359,3 @@ export function getImageDownloader(saveDir?: string): ImageDownloader {
   }
   return defaultDownloader;
 }
-

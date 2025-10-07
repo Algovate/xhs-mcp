@@ -156,7 +156,7 @@ export class FeedService extends BaseService {
           });
         }
 
-        const detail = noteDetailMap[feedId];
+        const detail = noteDetailMap[feedId] as Record<string, unknown>;
 
         return {
           success: true,

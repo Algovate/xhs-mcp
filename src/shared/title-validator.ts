@@ -1,7 +1,7 @@
 /**
  * Title validation utility for XHS MCP Server
  * Validates title width according to XiaoHongShu's display width rules
- * 
+ *
  * XHS Rules:
  * - Max width: 40 units
  * - CJK characters (Chinese/Japanese/Korean): 2 units each
@@ -29,10 +29,10 @@ export const XHS_TITLE_CONSTRAINTS = {
 
 /**
  * Validate title width according to XHS display rules
- * 
+ *
  * @param title - The title to validate
  * @returns Validation result with width information
- * 
+ *
  * @example
  * ```typescript
  * const result = validateTitleWidth('Hello世界');
@@ -74,10 +74,10 @@ export function validateTitleWidth(title: string): TitleValidationResult {
 
 /**
  * Validate and throw error if title width is invalid
- * 
+ *
  * @param title - The title to validate
  * @throws PublishError if title width is invalid
- * 
+ *
  * @example
  * ```typescript
  * try {
@@ -89,7 +89,7 @@ export function validateTitleWidth(title: string): TitleValidationResult {
  */
 export function assertTitleWidthValid(title: string): void {
   const result = validateTitleWidth(title);
-  
+
   if (!result.valid) {
     throw new PublishError(result.message!, {
       title,
@@ -108,10 +108,10 @@ export function assertTitleWidthValid(title: string): void {
 
 /**
  * Get the display width of a title
- * 
+ *
  * @param title - The title to measure
  * @returns Display width in units
- * 
+ *
  * @example
  * ```typescript
  * console.log(getTitleWidth('Hello'));        // 5
@@ -126,10 +126,10 @@ export function getTitleWidth(title: string): number {
 
 /**
  * Calculate how many characters can be added to the title
- * 
+ *
  * @param title - Current title
  * @returns Remaining width units available
- * 
+ *
  * @example
  * ```typescript
  * const remaining = getRemainingTitleWidth('Hello'); // 35
@@ -143,11 +143,11 @@ export function getRemainingTitleWidth(title: string): number {
 
 /**
  * Truncate title to fit within width limit
- * 
+ *
  * @param title - The title to truncate
  * @param maxWidth - Maximum width (default: XHS_TITLE_CONSTRAINTS.MAX_WIDTH)
  * @returns Truncated title that fits within width limit
- * 
+ *
  * @example
  * ```typescript
  * const long = '这是一个很长很长的标题'.repeat(5);
@@ -168,11 +168,11 @@ export function truncateTitleToWidth(
 
   for (const char of title) {
     const charWidth = stringWidth(char);
-    
+
     if (currentWidth + charWidth > maxWidth) {
       break;
     }
-    
+
     truncated += char;
     currentWidth += charWidth;
   }
@@ -183,7 +183,7 @@ export function truncateTitleToWidth(
 /**
  * Get human-readable width breakdown
  * Useful for debugging and user feedback
- * 
+ *
  * @param title - The title to analyze
  * @returns Width breakdown information
  */
@@ -201,7 +201,11 @@ export function getTitleWidthBreakdown(title: string): {
   }>;
 } {
   const totalWidth = getTitleWidth(title);
-  const breakdown: Array<{ char: string; width: number; type: 'CJK' | 'ASCII' | 'Emoji' | 'Other' }> = [];
+  const breakdown: Array<{
+    char: string;
+    width: number;
+    type: 'CJK' | 'ASCII' | 'Emoji' | 'Other';
+  }> = [];
 
   for (const char of title) {
     const charWidth = stringWidth(char);
@@ -229,4 +233,3 @@ export function getTitleWidthBreakdown(title: string): {
     breakdown,
   };
 }
-

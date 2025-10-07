@@ -114,7 +114,7 @@ export class ConfigManager {
     };
   }
 
-  public toDict(): Record<string, any> {
+  public toDict(): Record<string, unknown> {
     return {
       browser: {
         defaultTimeout: this.config.browser.defaultTimeout,

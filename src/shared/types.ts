@@ -2,13 +2,13 @@
  * Type definitions for XHS MCP Server
  */
 
-export interface XHSResponse<T = any> {
+export interface XHSResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
   operation?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface BrowserConfig {
@@ -141,7 +141,7 @@ export interface SearchResult {
 export interface FeedDetailResult {
   success: boolean;
   feedId: string;
-  detail: any;
+  detail: Record<string, unknown>;
   url: string;
 }
 
@@ -189,7 +189,7 @@ export interface XHSErrorContext {
   keyword?: string;
   timeout?: number;
   attempts?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Error classes moved to ./errors.ts

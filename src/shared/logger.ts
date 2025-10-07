@@ -20,25 +20,25 @@ export class Logger {
     return Logger.instance;
   }
 
-  public debug(message: string, ...args: any[]): void {
+  public debug(message: string, ...args: unknown[]): void {
     if (this.enabled) {
       console.error(`[DEBUG] ${message}`, ...args);
     }
   }
 
-  public info(message: string, ...args: any[]): void {
+  public info(message: string, ...args: unknown[]): void {
     if (this.enabled) {
       console.error(`[INFO] ${message}`, ...args);
     }
   }
 
-  public warn(message: string, ...args: any[]): void {
+  public warn(message: string, ...args: unknown[]): void {
     if (this.enabled) {
       console.error(`[WARN] ${message}`, ...args);
     }
   }
 
-  public error(message: string, ...args: any[]): void {
+  public error(message: string, ...args: unknown[]): void {
     if (this.enabled) {
       console.error(`[ERROR] ${message}`, ...args);
     }
