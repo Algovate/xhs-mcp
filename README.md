@@ -193,7 +193,6 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 
 ### 📚 文档
 - [完整使用指南](./docs/USAGE_GUIDE.md) - 详细的使用说明和最佳实践
-- [项目结构文档](./docs/PROJECT_STRUCTURE.md) - 代码组织和架构说明
 - [HTTP 传输文档](./docs/HTTP_TRANSPORTS.md) - HTTP/SSE 模式配置
 - [发布指南](./docs/PUBLISH_GUIDE.md) - NPM 发布流程
 
@@ -203,8 +202,14 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 
 ### 🧪 测试
 - [运行测试](./tests/README.md) - 测试说明和用法
-- 图片下载测试：`npm run test:image-downloader`
-- 标题验证测试：`npm run test:title-validation`
+- 运行所有测试：`npm test`
+
+## 🛠️ 构建说明
+
+- 统一使用单一生产构建配置：`config/webpack.config.js`
+- 已移除开发与优化变体；开发请直接运行：
+  - `npm run dev`（直接运行 TypeScript CLI）
+  - `npm run build`（打包到 `dist/xhs-mcp.js`）
 
 ## 🙏 致谢
 

@@ -137,9 +137,16 @@ npx xhs-mcp mcp --mode http --port 3000
 
 ### 📚 Documentation
 - [Usage Guide](./docs/USAGE_GUIDE.md) - Detailed usage and best practices
-- [Project Structure](./docs/PROJECT_STRUCTURE.md) - Code organization
 - [HTTP Transports](./docs/HTTP_TRANSPORTS.md) - HTTP/SSE mode configuration
 - [Publish Guide](./docs/PUBLISH_GUIDE.md) - NPM publishing process
+
+## 🛠️ Build Notes
+
+- Unified single production build config: `config/webpack.config.js`
+- Development and optimized variants have been removed.
+- For development:
+  - `npm run dev` (run TypeScript CLI directly)
+  - `npm run build` (bundle to `dist/xhs-mcp.js`)
 
 ### 🎨 Examples
 - [Examples](./examples/README.md) - Image and publishing examples
@@ -147,8 +154,7 @@ npx xhs-mcp mcp --mode http --port 3000
 
 ### 🧪 Tests
 - [Run Tests](./tests/README.md) - Testing guide
-- Image downloader test: `npm run test:image-downloader`
-- Title validation test: `npm run test:title-validation`
+- Run all tests: `npm test`
 
 ## 🙏 Acknowledgments
 

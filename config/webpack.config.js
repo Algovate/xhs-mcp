@@ -19,7 +19,7 @@ const config = {
   
   // Entry point - only CLI
   entry: {
-    'xhs-cli': resolve(__dirname, '../src/cli/cli.ts'),
+    'xhs-mcp': resolve(__dirname, '../src/cli/cli.ts'),
   },
 
   // Output configuration
@@ -93,9 +93,9 @@ const config = {
         use: [
           {
             loader: 'ts-loader',
-            options: {
-              // Use webpack-specific tsconfig
-              configFile: resolve(__dirname, 'tsconfig.webpack.json'),
+          options: {
+              // Use main tsconfig for webpack transpile-only
+              configFile: resolve(__dirname, 'tsconfig.json'),
               // Transpile only, don't emit declarations (handled separately)
               transpileOnly: true,
               // Enable experimental decorators

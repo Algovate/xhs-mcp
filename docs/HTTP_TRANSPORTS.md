@@ -1,7 +1,3 @@
----
-noteId: "aa57c8c098f311f0a8e11dcb3e2fc94e"
-tags: []
----
 # HTTP Transports Support
 
 XHS MCP Server now supports both SSE (Server-Sent Events) and Streamable HTTP transports, in addition to the traditional stdio transport.

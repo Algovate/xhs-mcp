@@ -2,10 +2,10 @@
   "name": "xhs-mcp",
   "version": "0.8.2",
   "description": "XiaoHongShu CLI and MCP Server",
-  "main": "dist/xhs-cli.js",
-  "types": "dist/xhs-cli.d.ts",
+  "main": "dist/xhs-mcp.js",
+  "types": "dist/xhs-mcp.d.ts",
   "bin": {
-    "xhs-mcp": "dist/xhs-cli.js"
+    "xhs-mcp": "dist/xhs-mcp.js"
   },
   "files": [
     "dist",
@@ -13,7 +13,7 @@
     "docs"
   ],
   "scripts": {
-    "build": "npm run clean && npm run build:types && npm run build:webpack && chmod +x dist/xhs-cli.js",
+    "build": "npm run clean && npm run build:types && npm run build:webpack && chmod +x dist/xhs-mcp.js",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist --project config/tsconfig.json",
     "build:webpack": "webpack --mode=production --config config/webpack.config.js",
     "clean": "rm -rf dist temp_images/*",

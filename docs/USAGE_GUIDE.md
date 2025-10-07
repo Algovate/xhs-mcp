@@ -1,8 +1,3 @@
----
-noteId: "usage-guide-v1"
-tags: []
----
-
 # XHS-MCP 使用指南
 
 ## 概述
