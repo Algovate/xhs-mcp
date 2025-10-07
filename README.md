@@ -17,7 +17,13 @@
 ## ✨ 功能
 
 - 认证：登录、登出、状态检查
-- 发布：图文发布（标题≤20、内容≤1000、最多18图）
+- 发布：图文和视频发布
+  - **图文发布**：标题≤20、内容≤1000、最多18图
+  - **视频发布**：支持 MP4、MOV、AVI、MKV、WebM、FLV、WMV 格式
+  - ⭐ **新功能**: 支持图片 URL 自动下载（HTTP/HTTPS）
+  - 支持本地图片路径
+  - 支持 URL 和本地路径混合使用
+  - 智能缓存机制，避免重复下载
 - 发现：推荐、搜索、详情、评论
 - 自动化：Puppeteer 驱动、无头模式、Cookie 管理
 
@@ -27,8 +33,9 @@
 - `xhs_discover_feeds`、`xhs_search_note`、`xhs_get_note_detail`
 - `xhs_comment_on_note`
 - `xhs_publish_content`（统一发布接口：`type`、`title`、`content`、`media_paths`、`tags`）
-  - 图片：1-18个图片文件
-  - 视频：恰好1个视频文件
+  - **图片发布**：1-18个图片文件或URL
+  - **视频发布**：恰好1个视频文件
+  - **混合使用**：支持图片URL和本地路径混合
 
 ## 🚀 快速开始（MCP）
 
@@ -107,7 +114,16 @@ npx xhs-mcp note-detail --feed-id <id> --xsec-token <token> [-b /path/to/chromiu
 npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!" [-b /path/to/chromium]
 
 # 发布
+# 使用本地图片
 npx xhs-mcp publish --type image --title 标题 --content 内容 -m path1.jpg,path2.png --tags a,b [-b /path/to/chromium]
+
+# ⭐ 使用图片 URL（自动下载）
+npx xhs-mcp publish --type image --title 标题 --content 内容 -m "https://example.com/img1.jpg,https://example.com/img2.png" --tags a,b
+
+# 混合使用 URL 和本地路径
+npx xhs-mcp publish --type image --title 标题 --content 内容 -m "https://example.com/img1.jpg,./local/img2.jpg" --tags a,b
+
+# 发布视频
 npx xhs-mcp publish --type video --title 视频标题 --content 视频描述 -m path/to/video.mp4 --tags a,b [-b /path/to/chromium]
 
 # 查看可用工具
@@ -165,9 +181,17 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 
 ## ⚠️ 注意事项
 
-- 标题≤20、内容≤1000、图片≤18
+- **图文发布**：标题≤20、内容≤1000、图片≤18
+- **视频发布**：支持多种格式，文件大小建议≤500MB
 - 避免同账号多端同时网页登录
 - 合理控制发帖频率
+- 图片 URL 自动下载到 `./temp_images/` 目录（自动缓存）
+- 图片 URL 支持格式：JPEG、PNG、GIF、WebP、BMP
+
+## 📖 更多示例
+
+- [完整使用指南](./docs/USAGE_GUIDE.md) - 详细的使用说明和最佳实践
+- [图片 URL 发布完整指南](./examples/image-url-publish.md) - 了解如何使用图片 URL 功能
 
 ## 🙏 致谢
 

@@ -10,6 +10,7 @@ import { existsSync, statSync } from 'fs';
 import { join } from 'path';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
+import { ImageDownloader } from '../../shared/image-downloader';
 
 // Constants for video publishing
 const VIDEO_TIMEOUTS = {
@@ -93,8 +94,11 @@ const TEXT_PATTERNS = {
 } as const;
 
 export class PublishService extends BaseService {
+  private imageDownloader: ImageDownloader;
+
   constructor(config: Config) {
     super(config);
+    this.imageDownloader = new ImageDownloader('./temp_images');
   }
 
   // Helper methods for element detection and text matching
@@ -178,8 +182,8 @@ export class PublishService extends BaseService {
       throw new PublishError('At least one image is required');
     }
 
-    // Validate and resolve image paths
-    const resolvedPaths = this.validateAndResolveImagePaths(imagePaths);
+    // Process image paths - download URLs and validate local paths
+    const resolvedPaths = await this.processImagePaths(imagePaths);
 
     // Wait for upload container selector
     const uploadSelector = 'div.upload-content';
@@ -275,29 +279,37 @@ export class PublishService extends BaseService {
     }
   }
 
-  private validateAndResolveImagePaths(imagePaths: string[]): string[] {
-    const resolvedPaths: string[] = [];
+  /**
+   * Process image paths - download URLs and validate local paths
+   */
+  private async processImagePaths(imagePaths: string[]): Promise<string[]> {
+    // Use ImageDownloader to process paths (downloads URLs, validates local paths)
+    const resolvedPaths = await this.imageDownloader.processImagePaths(imagePaths);
 
-    for (const imagePath of imagePaths) {
-      const resolvedPath = join(process.cwd(), imagePath);
+    // Validate resolved paths
+    for (const resolvedPath of resolvedPaths) {
+      // For local paths that aren't absolute, resolve them
+      const fullPath = resolvedPath.startsWith('/') || resolvedPath.match(/^[a-zA-Z]:/) 
+        ? resolvedPath 
+        : join(process.cwd(), resolvedPath);
 
-      if (!existsSync(resolvedPath)) {
-        throw new InvalidImageError(`Image file not found: ${imagePath}`);
+      if (!existsSync(fullPath)) {
+        throw new InvalidImageError(`Image file not found: ${resolvedPath}`);
       }
 
-      const stats = statSync(resolvedPath);
+      const stats = statSync(fullPath);
       if (!stats.isFile()) {
-        throw new InvalidImageError(`Path is not a file: ${imagePath}`);
+        throw new InvalidImageError(`Path is not a file: ${resolvedPath}`);
       }
 
       // Check file extension
-      const ext = imagePath.toLowerCase().split('.').pop();
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      const ext = resolvedPath.toLowerCase().split('.').pop();
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
       if (!ext || !allowedExtensions.includes(ext)) {
-        throw new InvalidImageError(`Unsupported image format: ${imagePath}. Supported: ${allowedExtensions.join(', ')}`);
+        throw new InvalidImageError(
+          `Unsupported image format: ${resolvedPath}. Supported: ${allowedExtensions.join(', ')}`
+        );
       }
-
-      resolvedPaths.push(resolvedPath);
     }
 
     if (resolvedPaths.length > 18) {
@@ -380,11 +392,11 @@ export class PublishService extends BaseService {
 
   private async uploadImages(page: Page, imagePaths: string[]): Promise<void> {
     // Try primary file input selector
-    let fileInput = await page.$('input[type=file]');
+    let fileInput = await page.$('input[type=file]') as any;
 
     if (!fileInput) {
       // Fallback to alternative selector
-      fileInput = await page.$('.upload-input');
+      fileInput = await page.$('.upload-input') as any;
 
       if (!fileInput) {
         throw new PublishError('Could not find file upload input on page');

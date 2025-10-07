@@ -10,6 +10,7 @@ export * from './types';
 export * from './utils';
 export * from './xhs.utils';
 export * from './cookies';
+export * from './image-downloader';
 
 // Error handling and logging
 export * from './errors';

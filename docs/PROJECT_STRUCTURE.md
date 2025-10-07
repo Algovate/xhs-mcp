@@ -51,6 +51,7 @@ xhs-mcp/
 │   │   ├── config.ts              # 配置管理
 │   │   ├── cookies.ts             # Cookie管理
 │   │   ├── errors.ts              # 错误处理
+│   │   ├── image-downloader.ts    # 图片下载器（新增）
 │   │   ├── logger.ts              # 日志记录
 │   │   ├── types.ts               # 共享类型定义
 │   │   ├── utils.ts               # 工具函数
@@ -67,10 +68,13 @@ xhs-mcp/
 ├── docs/                          # 文档目录
 │   ├── HTTP_TRANSPORTS.md         # HTTP传输文档
 │   ├── PUBLISH_GUIDE.md           # 发布指南
+│   ├── USAGE_GUIDE.md             # 使用指南（新增）
 │   ├── WEBPACK_OPTIMIZATION.md    # Webpack优化报告
 │   └── PROJECT_STRUCTURE.md       # 项目结构文档（本文件）
 ├── examples/                      # 示例文件
 │   ├── *.jpg, *.png, *.svg        # 示例图片
+│   ├── image-url-publish.md       # 图片URL发布指南（新增）
+│   ├── test-image-url-download.js # 图片下载测试脚本（新增）
 │   ├── xhs.publish_note.txt       # 发布示例
 │   └── xhs.uploadimage.txt        # 上传示例
 ├── dist/                          # 构建输出目录
@@ -126,6 +130,7 @@ xhs-mcp/
 - 日志记录
 - 工具函数
 - 类型定义
+- 图片下载器（支持URL自动下载和缓存）
 
 ## 导入路径规范
 
@@ -200,3 +205,53 @@ import { getConfig } from '@/shared/config';
 5. **构建优化**: 分离的构建配置支持不同的构建需求
 
 这种结构设计确保了项目的长期可维护性和开发效率，同时保持了代码的清晰性和组织性。
+
+## 新增功能：图片下载器
+
+### 功能概述
+
+`image-downloader.ts` 是一个新增的共享模块，用于处理图片 URL 的自动下载和缓存功能。
+
+### 主要特性
+
+- **URL 识别**：自动识别 HTTP/HTTPS 图片 URL
+- **智能下载**：下载图片到本地 `./temp_images/` 目录
+- **格式验证**：检查文件签名，确保是有效的图片格式
+- **缓存机制**：使用 SHA256 哈希避免重复下载
+- **混合支持**：同时支持 URL 和本地路径
+- **错误处理**：完整的错误处理和用户友好的错误信息
+
+### 支持格式
+
+- JPEG/JPG
+- PNG
+- GIF
+- WebP
+- BMP
+
+### 使用示例
+
+```typescript
+import { ImageDownloader } from '../../shared/image-downloader';
+
+const downloader = new ImageDownloader('./temp_images');
+
+// 下载单个图片
+const result = await downloader.downloadImage('https://example.com/image.jpg');
+
+// 下载多个图片
+const results = await downloader.downloadImages([
+  'https://example.com/img1.jpg',
+  'https://example.com/img2.png'
+]);
+
+// 处理混合路径
+const localPaths = await downloader.processImagePaths([
+  'https://example.com/remote.jpg',
+  './local/image.jpg'
+]);
+```
+
+### 集成方式
+
+该模块已集成到发布服务中，在 `publish.service.ts` 的 `processImagePaths` 方法中使用，实现了透明的 URL 下载功能。
