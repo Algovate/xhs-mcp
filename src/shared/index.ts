@@ -11,6 +11,7 @@ export * from './utils';
 export * from './xhs.utils';
 export * from './cookies';
 export * from './image-downloader';
+export * from './title-validator';
 
 // Error handling and logging
 export * from './errors';

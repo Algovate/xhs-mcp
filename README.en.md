@@ -17,7 +17,13 @@ Unified CLI `xhs-mcp` with built-in MCP server subcommand. Automate XiaoHongShu 
 ## ✨ Features
 
 - Auth: login, logout, status check
-- Publish: unified content publishing (images: 1-18 files, videos: exactly 1 file)
+- Publish: unified content publishing
+  - **Images**: 1-18 files or URLs
+  - **Videos**: exactly 1 file
+  - ⭐ **New**: Auto-download image URLs (HTTP/HTTPS)
+  - ⭐ **New**: Precise title width validation (CJK: 2 units, ASCII: 1 unit)
+  - Support local paths and URLs mixed
+  - Smart caching to avoid duplicate downloads
 - Discover: home feeds, keyword search, note detail, comment
 - Automation: Puppeteer-driven, headless mode, cookie management
 
@@ -27,8 +33,9 @@ Unified CLI `xhs-mcp` with built-in MCP server subcommand. Automate XiaoHongShu 
 - `xhs_discover_feeds`, `xhs_search_note`, `xhs_get_note_detail`
 - `xhs_comment_on_note`
 - `xhs_publish_content` (unified interface: `type`, `title`, `content`, `media_paths`, `tags`)
-  - Images: 1-18 image files
-  - Videos: exactly 1 video file
+  - **Images**: 1-18 image files or URLs
+  - **Videos**: exactly 1 video file
+  - **Mixed**: Support image URLs and local paths together
 
 ## 🚀 Quick Start (MCP)
 
@@ -68,18 +75,37 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | npx xhs-mcp mcp
 ## 🧰 CLI
 
 ```bash
+# Auth
 npx xhs-mcp login --timeout 120
 npx xhs-mcp logout
 npx xhs-mcp status
- npx xhs-mcp browser  # check and install Chromium, shows executable path
- npx xhs-mcp feeds
- npx xhs-mcp search -k keyword
- npx xhs-mcp note-detail --feed-id <id> --xsec-token <token>
- npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!"
- npx xhs-mcp publish --type image --title Title --content Content -m path1.jpg,path2.png --tags a,b
- npx xhs-mcp publish --type video --title Title --content Content -m video.mp4 --tags a,b
- npx xhs-mcp tools [--detailed] [--json]
- npx xhs-mcp mcp --mode http --port 3000
+
+# Browser
+npx xhs-mcp browser  # check and install Chromium, shows executable path
+
+# Discover
+npx xhs-mcp feeds
+npx xhs-mcp search -k keyword
+npx xhs-mcp note-detail --feed-id <id> --xsec-token <token>
+npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!"
+
+# Publish with local images
+npx xhs-mcp publish --type image --title Title --content Content -m path1.jpg,path2.png --tags a,b
+
+# ⭐ Publish with image URLs (auto-download)
+npx xhs-mcp publish --type image --title Title --content Content -m "https://example.com/img1.jpg,https://example.com/img2.png" --tags a,b
+
+# Mix URLs and local paths
+npx xhs-mcp publish --type image --title Title --content Content -m "https://example.com/img1.jpg,./local/img2.jpg" --tags a,b
+
+# Video
+npx xhs-mcp publish --type video --title Title --content Content -m video.mp4 --tags a,b
+
+# Tools
+npx xhs-mcp tools [--detailed] [--json]
+
+# MCP Server
+npx xhs-mcp mcp --mode http --port 3000
 ```
 
 ## 🔧 Client Integration (Cursor)
@@ -100,9 +126,29 @@ npx xhs-mcp status
 
 ## ⚠️ Notes
 
-- Title≤20, content≤1000, images: 1-18 files, videos: exactly 1 file
+- **Images**: Title≤20 chars (40 display units), content≤1000, 1-18 images
+- **Videos**: exactly 1 video file, recommended size ≤500MB
 - Avoid multiple web logins for the same account simultaneously
 - Keep reasonable posting frequency
+- Image URLs auto-download to `./temp_images/` directory (cached)
+- Supported image formats: JPEG, PNG, GIF, WebP, BMP
+
+## 📖 Documentation and Examples
+
+### 📚 Documentation
+- [Usage Guide](./docs/USAGE_GUIDE.md) - Detailed usage and best practices
+- [Project Structure](./docs/PROJECT_STRUCTURE.md) - Code organization
+- [HTTP Transports](./docs/HTTP_TRANSPORTS.md) - HTTP/SSE mode configuration
+- [Publish Guide](./docs/PUBLISH_GUIDE.md) - NPM publishing process
+
+### 🎨 Examples
+- [Examples](./examples/README.md) - Image and publishing examples
+- [Sample Images](./examples/images/) - Test images
+
+### 🧪 Tests
+- [Run Tests](./tests/README.md) - Testing guide
+- Image downloader test: `npm run test:image-downloader`
+- Title validation test: `npm run test:title-validation`
 
 ## 🙏 Acknowledgments
 

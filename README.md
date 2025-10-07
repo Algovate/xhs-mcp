@@ -18,9 +18,10 @@
 
 - 认证：登录、登出、状态检查
 - 发布：图文和视频发布
-  - **图文发布**：标题≤20、内容≤1000、最多18图
+  - **图文发布**：标题≤20字符（40显示单位）、内容≤1000、最多18图
   - **视频发布**：支持 MP4、MOV、AVI、MKV、WebM、FLV、WMV 格式
   - ⭐ **新功能**: 支持图片 URL 自动下载（HTTP/HTTPS）
+  - ⭐ **新功能**: 标题宽度精确验证（CJK字符2单位，ASCII字符1单位）
   - 支持本地图片路径
   - 支持 URL 和本地路径混合使用
   - 智能缓存机制，避免重复下载
@@ -188,10 +189,22 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 - 图片 URL 自动下载到 `./temp_images/` 目录（自动缓存）
 - 图片 URL 支持格式：JPEG、PNG、GIF、WebP、BMP
 
-## 📖 更多示例
+## 📖 文档和示例
 
+### 📚 文档
 - [完整使用指南](./docs/USAGE_GUIDE.md) - 详细的使用说明和最佳实践
-- [图片 URL 发布完整指南](./examples/image-url-publish.md) - 了解如何使用图片 URL 功能
+- [项目结构文档](./docs/PROJECT_STRUCTURE.md) - 代码组织和架构说明
+- [HTTP 传输文档](./docs/HTTP_TRANSPORTS.md) - HTTP/SSE 模式配置
+- [发布指南](./docs/PUBLISH_GUIDE.md) - NPM 发布流程
+
+### 🎨 示例
+- [使用示例](./examples/README.md) - 图片和发布示例
+- [示例图片](./examples/images/) - 可用于测试的示例图片
+
+### 🧪 测试
+- [运行测试](./tests/README.md) - 测试说明和用法
+- 图片下载测试：`npm run test:image-downloader`
+- 标题验证测试：`npm run test:title-validation`
 
 ## 🙏 致谢
 

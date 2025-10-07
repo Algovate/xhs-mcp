@@ -20,10 +20,16 @@ export interface DownloadResult {
 export class ImageDownloader {
   private saveDir: string;
   private timeout: number;
+  private maxFileSize: number;
 
-  constructor(saveDir: string = './temp_images', timeout: number = 30000) {
+  constructor(
+    saveDir: string = './temp_images',
+    timeout: number = 30000,
+    maxFileSize: number = 10 * 1024 * 1024 // 10MB default
+  ) {
     this.saveDir = saveDir;
     this.timeout = timeout;
+    this.maxFileSize = maxFileSize;
 
     // Ensure save directory exists
     if (!existsSync(this.saveDir)) {
@@ -42,6 +48,7 @@ export class ImageDownloader {
 
   /**
    * Generate a unique filename for an image URL
+   * Uses only URL hash for consistent caching
    */
   private generateFileName(imageUrl: string): string {
     // Use SHA256 hash of URL for uniqueness
@@ -61,7 +68,8 @@ export class ImageDownloader {
       // Use default extension
     }
 
-    return `img_${shortHash}_${Date.now()}.${extension}`;
+    // Fixed filename for proper caching (no timestamp)
+    return `img_${shortHash}.${extension}`;
   }
 
   /**
@@ -170,9 +178,41 @@ export class ImageDownloader {
         );
       }
 
+      // Check Content-Length if available
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > this.maxFileSize) {
+        throw new InvalidImageError(
+          `Image file too large: ${(parseInt(contentLength) / 1024 / 1024).toFixed(
+            2
+          )}MB (max: ${(this.maxFileSize / 1024 / 1024).toFixed(2)}MB)`,
+          {
+            url: imageUrl,
+            fileSize: parseInt(contentLength),
+            maxSize: this.maxFileSize,
+            suggestion: 'Try using a smaller image or increase maxFileSize',
+          }
+        );
+      }
+
       // Get image data
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+
+      // Verify actual size
+      if (buffer.length > this.maxFileSize) {
+        throw new InvalidImageError(
+          `Downloaded file too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB (max: ${(
+            this.maxFileSize /
+            1024 /
+            1024
+          ).toFixed(2)}MB)`,
+          {
+            url: imageUrl,
+            fileSize: buffer.length,
+            maxSize: this.maxFileSize,
+          }
+        );
+      }
 
       // Validate it's actually an image
       const validation = this.validateImageData(buffer);
@@ -226,20 +266,26 @@ export class ImageDownloader {
   }
 
   /**
-   * Download multiple images from URLs
+   * Download multiple images from URLs (parallel download for better performance)
    */
   async downloadImages(imageUrls: string[]): Promise<DownloadResult[]> {
-    const results: DownloadResult[] = [];
+    // Download all images in parallel
+    const downloadPromises = imageUrls.map((url) =>
+      this.downloadImage(url).catch((error) => ({ error, url }))
+    );
+
+    const results = await Promise.all(downloadPromises);
+
+    const successResults: DownloadResult[] = [];
     const errors: Array<{ url: string; error: Error }> = [];
 
-    for (const url of imageUrls) {
-      try {
-        const result = await this.downloadImage(url);
-        results.push(result);
-      } catch (error) {
-        errors.push({ url, error: error as Error });
+    results.forEach((result) => {
+      if ('error' in result) {
+        errors.push(result as any);
+      } else {
+        successResults.push(result as DownloadResult);
       }
-    }
+    });
 
     // If any downloads failed, throw an error with details
     if (errors.length > 0) {
@@ -249,13 +295,13 @@ export class ImageDownloader {
         {
           totalCount: imageUrls.length,
           failedCount: errors.length,
-          successCount: results.length,
+          successCount: successResults.length,
           failedUrls: errors.map((e) => e.url),
         }
       );
     }
 
-    return results;
+    return successResults;
   }
 
   /**

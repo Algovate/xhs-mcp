@@ -51,13 +51,30 @@ xhs-mcp/
 │   │   ├── config.ts              # 配置管理
 │   │   ├── cookies.ts             # Cookie管理
 │   │   ├── errors.ts              # 错误处理
-│   │   ├── image-downloader.ts    # 图片下载器（新增）
+│   │   ├── image-downloader.ts    # 图片下载器
+│   │   ├── title-validator.ts     # 标题宽度验证器
 │   │   ├── logger.ts              # 日志记录
 │   │   ├── types.ts               # 共享类型定义
 │   │   ├── utils.ts               # 工具函数
 │   │   ├── xhs.utils.ts           # XHS特定工具
 │   │   └── index.ts               # 共享模块导出
 │   └── index.ts                   # 主入口文件
+├── tests/                         # 测试目录
+│   ├── integration/               # 集成测试
+│   │   ├── image-downloader.test.js # 图片下载测试
+│   │   └── title-validation.test.js # 标题验证测试
+│   ├── fixtures/                  # 测试数据
+│   │   └── Bert.jpg               # 测试图片
+│   └── README.md                  # 测试说明
+├── examples/                      # 示例文件
+│   ├── images/                    # 示例图片
+│   │   ├── circle.png             # 圆形图案（PNG）
+│   │   ├── circle.svg             # 圆形图案（SVG）
+│   │   ├── geometric.png          # 几何图案（PNG）
+│   │   ├── geometric.svg          # 几何图案（SVG）
+│   │   ├── wave.png               # 波浪图案（PNG）
+│   │   └── wave.svg               # 波浪图案（SVG）
+│   └── README.md                  # 示例说明
 ├── config/                        # 配置文件目录
 │   ├── tsconfig.json              # TypeScript配置
 │   ├── tsconfig.webpack.json      # Webpack专用TS配置
@@ -68,15 +85,9 @@ xhs-mcp/
 ├── docs/                          # 文档目录
 │   ├── HTTP_TRANSPORTS.md         # HTTP传输文档
 │   ├── PUBLISH_GUIDE.md           # 发布指南
-│   ├── USAGE_GUIDE.md             # 使用指南（新增）
+│   ├── USAGE_GUIDE.md             # 使用指南
 │   ├── WEBPACK_OPTIMIZATION.md    # Webpack优化报告
 │   └── PROJECT_STRUCTURE.md       # 项目结构文档（本文件）
-├── examples/                      # 示例文件
-│   ├── *.jpg, *.png, *.svg        # 示例图片
-│   ├── image-url-publish.md       # 图片URL发布指南（新增）
-│   ├── test-image-url-download.js # 图片下载测试脚本（新增）
-│   ├── xhs.publish_note.txt       # 发布示例
-│   └── xhs.uploadimage.txt        # 上传示例
 ├── dist/                          # 构建输出目录
 │   ├── xhs-cli.js                 # 构建的CLI工具
 │   └── [类型定义文件]              # TypeScript声明文件
@@ -131,6 +142,17 @@ xhs-mcp/
 - 工具函数
 - 类型定义
 - 图片下载器（支持URL自动下载和缓存）
+- 标题验证器（精确的宽度计算）
+
+### 测试模块 (`tests/`)
+- **integration/**: 集成测试脚本
+  - 图片下载功能测试
+  - 标题验证功能测试
+- **fixtures/**: 测试数据和示例文件
+
+### 示例模块 (`examples/`)
+- **images/**: 用于演示发布功能的示例图片
+- **README.md**: 使用示例和说明
 
 ## 导入路径规范
 
@@ -206,52 +228,84 @@ import { getConfig } from '@/shared/config';
 
 这种结构设计确保了项目的长期可维护性和开发效率，同时保持了代码的清晰性和组织性。
 
-## 新增功能：图片下载器
+## 测试与示例
 
-### 功能概述
+### 测试目录结构
 
-`image-downloader.ts` 是一个新增的共享模块，用于处理图片 URL 的自动下载和缓存功能。
+测试文件组织在 `tests/` 目录中：
 
-### 主要特性
+```
+tests/
+├── integration/              # 集成测试
+│   ├── image-downloader.test.js
+│   └── title-validation.test.js
+└── fixtures/                 # 测试数据
+    └── Bert.jpg
+```
 
-- **URL 识别**：自动识别 HTTP/HTTPS 图片 URL
-- **智能下载**：下载图片到本地 `./temp_images/` 目录
-- **格式验证**：检查文件签名，确保是有效的图片格式
-- **缓存机制**：使用 SHA256 哈希避免重复下载
-- **混合支持**：同时支持 URL 和本地路径
-- **错误处理**：完整的错误处理和用户友好的错误信息
+### 运行测试
 
-### 支持格式
+```bash
+# 运行所有测试
+npm test
 
-- JPEG/JPG
-- PNG
-- GIF
-- WebP
-- BMP
+# 运行单个测试
+npm run test:image-downloader
+npm run test:title-validation
 
-### 使用示例
+# 手动运行
+node tests/integration/image-downloader.test.js
+node tests/integration/title-validation.test.js
+```
 
+### 示例目录结构
+
+示例文件组织在 `examples/` 目录中：
+
+```
+examples/
+├── images/                   # 示例图片
+│   ├── circle.png/svg
+│   ├── geometric.png/svg
+│   └── wave.png/svg
+└── README.md                 # 使用示例
+```
+
+### 核心功能模块
+
+#### 1. 图片下载器 (`image-downloader.ts`)
+
+处理图片 URL 的自动下载和缓存功能。
+
+**主要特性**：
+- URL 识别和下载
+- 智能缓存（SHA256 哈希）
+- 格式验证（JPEG, PNG, GIF, WebP, BMP）
+- 混合路径支持
+
+**使用示例**：
 ```typescript
 import { ImageDownloader } from '../../shared/image-downloader';
 
 const downloader = new ImageDownloader('./temp_images');
-
-// 下载单个图片
 const result = await downloader.downloadImage('https://example.com/image.jpg');
-
-// 下载多个图片
-const results = await downloader.downloadImages([
-  'https://example.com/img1.jpg',
-  'https://example.com/img2.png'
-]);
-
-// 处理混合路径
-const localPaths = await downloader.processImagePaths([
-  'https://example.com/remote.jpg',
-  './local/image.jpg'
-]);
 ```
 
-### 集成方式
+#### 2. 标题验证器 (`title-validator.ts`)
 
-该模块已集成到发布服务中，在 `publish.service.ts` 的 `processImagePaths` 方法中使用，实现了透明的 URL 下载功能。
+精确的标题宽度验证，符合小红书显示规则。
+
+**主要特性**：
+- CJK 字符（中/日/韩）：2 单位
+- ASCII 字符（英文/数字）：1 单位
+- Emoji 处理
+- 智能截断
+
+**使用示例**：
+```typescript
+import { validateTitleWidth } from '../../shared/title-validator';
+
+const result = validateTitleWidth('Hello世界');
+console.log(result.valid); // true
+console.log(result.width);  // 10 units
+```

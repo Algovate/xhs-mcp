@@ -30,7 +30,10 @@
     "format:check": "prettier --check src/**/*.ts",
     "prepublishOnly": "npm run build && npm run lint && npm run format:check",
     "prepack": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0",
+    "test": "npm run test:integration",
+    "test:integration": "node tests/integration/image-downloader.test.js && node tests/integration/title-validation.test.js",
+    "test:image-downloader": "node tests/integration/image-downloader.test.js",
+    "test:title-validation": "node tests/integration/title-validation.test.js",
     "version": "npm run build",
     "postversion": "git push && git push --tags"
   },
@@ -63,7 +66,8 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^22.0.0",
+    "string-width": "^8.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",

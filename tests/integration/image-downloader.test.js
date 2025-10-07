@@ -3,10 +3,11 @@
  * Test script for image URL download feature
  * 
  * Usage:
- *   node examples/test-image-url-download.js
+ *   node tests/integration/image-downloader.test.js
+ *   npm test
  */
 
-const { ImageDownloader } = require('../dist/shared/image-downloader');
+const { ImageDownloader } = require('../../dist/shared/image-downloader');
 const path = require('path');
 
 async function testImageDownload() {
@@ -46,7 +47,7 @@ async function testImageDownload() {
     console.log('📥 Test 3: Processing mixed paths...');
     const mixedPaths = [
       testUrls[0],  // URL
-      './examples/Bert.jpg',  // Local file
+      './tests/fixtures/Bert.jpg',  // Local file
       testUrls[1],  // URL
     ];
     const processedPaths = await downloader.processImagePaths(mixedPaths);

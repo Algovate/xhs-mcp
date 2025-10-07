@@ -11,6 +11,7 @@ import { join } from 'path';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { ImageDownloader } from '../../shared/image-downloader';
+import { assertTitleWidthValid, getTitleWidth } from '../../shared/title-validator';
 
 // Constants for video publishing
 const VIDEO_TIMEOUTS = {
@@ -173,6 +174,10 @@ export class PublishService extends BaseService {
     if (!title?.trim()) {
       throw new PublishError('Note title cannot be empty');
     }
+
+    // Validate title width (CJK characters count as 2 units, ASCII as 1)
+    assertTitleWidthValid(title);
+    logger.debug(`Title width validation passed: "${title}" (${getTitleWidth(title)} units)`);
 
     if (!content?.trim()) {
       throw new PublishError('Note content cannot be empty');
@@ -951,6 +956,10 @@ export class PublishService extends BaseService {
     if (!title?.trim()) {
       throw new PublishError('Video title cannot be empty');
     }
+
+    // Validate title width for video posts too
+    assertTitleWidthValid(title);
+    logger.debug(`Video title width validation passed: "${title}" (${getTitleWidth(title)} units)`);
 
     if (!content?.trim()) {
       throw new PublishError('Video content cannot be empty');
