@@ -1,42 +1,53 @@
 ---
-globs: *.ts
-description: TypeScript standards and conventions for XHS MCP
+globs: *.ts,*.tsx
+description: TypeScript coding standards and conventions
 ---
+
 # TypeScript Standards for XHS MCP
 
-**This project is TypeScript-first** — prioritize type safety and consistency.
-
-## Code Style & Standards
-
-- Always use semicolons
-- Enable strict TypeScript and prefer explicit return types for functions
-- Avoid `any` — prefer `unknown` or concrete types
-- Target ES2022 features, use ES modules
-- Prefer interfaces over type aliases for object shapes
-- Use generics for reusable types
+## Type Safety
+- **Strict Mode**: Always use strict TypeScript configuration
+- **Explicit Types**: Use explicit return types for public methods: `method(): ReturnType`
+- **No Any**: Avoid `any` type - use `unknown` or specific types
+- **Nullish Coalescing**: Use `??` operator instead of `||` for null/undefined checks
+- **Optional Chaining**: Use `?.` operator for safe property access
 
 ## Import/Export Patterns
+- **ES Modules**: Use ES module syntax (`import`/`export`)
+- **Named Exports**: Prefer named exports over default exports
+- **Index Files**: Use index files for clean module boundaries
+- **Type Imports**: Use `import type` for type-only imports
 
-```typescript
-// Use .js extensions for compiled output imports when importing built files
-// Prefer named exports over default exports
-```
+## Interface Design
+- **Consistent Naming**: Use PascalCase for interfaces (`XHSResponse`, `BrowserConfig`)
+- **Generic Types**: Use generics for reusable interfaces (`XHSResponse<T>`)
+- **Optional Properties**: Mark optional properties with `?`
+- **Readonly**: Use `readonly` for immutable properties
 
 ## Error Handling
+- **Custom Errors**: Extend `XHSError` base class for domain-specific errors
+- **Error Context**: Include context objects with error information
+- **Type-Safe Errors**: Use specific error types (`AuthenticationError`, `BrowserError`)
 
-- Use custom error classes; include operation context
-- Handle async operations with try/catch; avoid swallowing errors
+## Service Patterns
+- **Base Service**: All services extend `BaseService`
+- **Dependency Injection**: Inject dependencies via constructor
+- **Protected Methods**: Use `protected` for internal service methods
+- **Abstract Classes**: Use abstract base classes for common functionality
 
-## Service Architecture
+## Code Organization
+- **Single Responsibility**: One class/service per file
+- **Co-location**: Keep related types and implementations together
+- **Barrel Exports**: Use index files for clean imports
+- **File Naming**: Use kebab-case for files (`auth.service.ts`, `browser.manager.ts`)
 
-- Use `ConfigManager.getInstance()` for config singletons
-- Prefer dependency injection via constructors
-- Async service methods for IO work
-- Use `XHSResponse<T>` for consistent responses
+## Async Patterns
+- **Async/Await**: Prefer async/await over Promises
+- **Error Propagation**: Let errors bubble up naturally
+- **Timeout Handling**: Use proper timeout configurations
+- **Resource Cleanup**: Ensure proper cleanup in finally blocks
 
-## Type Definitions
-
-- Centralize shared types in [src/shared/types.ts](mdc:src/shared/types.ts)
-- Interface names are PascalCase (e.g., `XHSResponse`, `BrowserConfig`)
-- Use `?` for optionals; avoid `undefined` in unions
-
+## Documentation
+- **JSDoc Comments**: Document public APIs with JSDoc
+- **Type Comments**: Add comments for complex type definitions
+- **Examples**: Include usage examples in documentation

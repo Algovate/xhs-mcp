@@ -1,29 +1,49 @@
 ---
 alwaysApply: true
-description: Project structure overview and key entry points for XHS MCP
+description: XHS MCP project structure and architecture patterns
 ---
-# Project Structure Guide
 
-Main entrypoints and key modules:
+# XHS MCP Project Structure Guide
 
-- CLI: [src/cli/cli.ts](mdc:src/cli/cli.ts)
-- Library index: [src/index.ts](mdc:src/index.ts)
-- MCP server bootstrap: [src/server/mcp.server.ts](mdc:src/server/mcp.server.ts)
-- HTTP server: [src/server/http.server.ts](mdc:src/server/http.server.ts)
-- Server handlers: [src/server/handlers/index.ts](mdc:src/server/handlers/index.ts)
-- Core services: [src/core/index.ts](mdc:src/core/index.ts)
-- Shared utilities and types: [src/shared/index.ts](mdc:src/shared/index.ts), [src/shared/types.ts](mdc:src/shared/types.ts)
-- Configuration manager: [src/shared/config.ts](mdc:src/shared/config.ts)
-- Logger: [src/shared/logger.ts](mdc:src/shared/logger.ts)
+## Core Architecture
+This is a TypeScript-based XiaoHongShu (XHS) automation tool with MCP (Model Context Protocol) server capabilities.
 
-Build and configuration:
+### Main Entry Points
+- CLI: [src/cli/cli.ts](mdc:src/cli/cli.ts) - Command-line interface
+- Library: [src/index.ts](mdc:src/index.ts) - Main library exports
+- MCP Server: [src/server/mcp.server.ts](mdc:src/server/mcp.server.ts) - MCP protocol server
+- HTTP Server: [src/server/http.server.ts](mdc:src/server/http.server.ts) - HTTP transport
 
-- TypeScript config: [config/tsconfig.json](mdc:config/tsconfig.json)
-- Webpack configs: [config/webpack.config.js](mdc:config/webpack.config.js), [config/webpack.dev.config.js](mdc:config/webpack.dev.config.js), [config/webpack.optimized.config.js](mdc:config/webpack.optimized.config.js)
-- ESLint config: [config/eslint.config.js](mdc:config/eslint.config.js)
+### Service Layer Architecture
+- **Base Service**: [src/shared/base.service.ts](mdc:src/shared/base.service.ts) - Abstract base class for all services
+- **Core Services**: [src/core/](mdc:src/core/) - Business logic services
+  - Authentication: [src/core/auth/](mdc:src/core/auth/)
+  - Browser Management: [src/core/browser/](mdc:src/core/browser/)
+  - Feed Operations: [src/core/feeds/](mdc:src/core/feeds/)
+  - Publishing: [src/core/publishing/](mdc:src/core/publishing/)
 
-Output artifacts:
+### Shared Infrastructure
+- **Types**: [src/shared/types.ts](mdc:src/shared/types.ts) - Core type definitions
+- **Errors**: [src/shared/errors.ts](mdc:src/shared/errors.ts) - Custom error classes
+- **Configuration**: [src/shared/config.ts](mdc:src/shared/config.ts) - App configuration
+- **Utilities**: [src/shared/utils.ts](mdc:src/shared/utils.ts) - Common utilities
 
-- Compiled CLI bundle: [dist/xhs-cli.js](mdc:dist/xhs-cli.js)
-- Vendor chunk: [dist/942.js](mdc:dist/942.js)
+### Server Layer
+- **Handlers**: [src/server/handlers/](mdc:src/server/handlers/) - Request handlers
+- **Schemas**: [src/server/schemas/](mdc:src/server/schemas/) - MCP tool schemas
 
+### Build Configuration
+- TypeScript: [config/tsconfig.json](mdc:config/tsconfig.json)
+- ESLint: [config/eslint.config.js](mdc:config/eslint.config.js)
+- Webpack: [config/webpack.config.js](mdc:config/webpack.config.js)
+
+### Output Artifacts
+- Compiled bundle: [dist/xhs-mcp.js](mdc:dist/xhs-mcp.js)
+- CLI executable: [dist/xhs-cli.js](mdc:dist/xhs-cli.js)
+
+## Key Patterns
+1. **Service Inheritance**: All services extend `BaseService`
+2. **Error Hierarchy**: Custom errors extend `XHSError` with specific error types
+3. **Configuration-Driven**: Services receive config via constructor
+4. **Browser Automation**: Centralized browser management via `BrowserManager`
+5. **MCP Protocol**: Standard MCP server implementation with tool and resource handlers
