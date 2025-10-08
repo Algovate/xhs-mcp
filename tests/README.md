@@ -1,9 +1,3 @@
----
-noteId: "09ae9410a32c11f0ba9895502e9a78af"
-tags: []
-
----
-
 # Tests
 
 This directory contains test scripts and fixtures for xhs-mcp.
