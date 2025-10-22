@@ -11,8 +11,8 @@ import {
   validateRequiredParams,
   validatePublishNoteParams,
   safeErrorHandler,
-  createToolResponse,
-  createErrorResponse,
+  createMcpToolResponse,
+  createMcpErrorResponse,
 } from '../../shared/utils';
 import { logger } from '../../shared/logger';
 
@@ -66,21 +66,21 @@ export class ToolHandlers {
 
   async handleAuthLogout(): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.authService.logout();
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleAuthStatus(
     browserPath?: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.authService.checkStatus(browserPath);
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleDiscoverFeeds(
     browserPath?: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.feedService.getFeedList(browserPath);
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleSearchNote(
@@ -89,7 +89,7 @@ export class ToolHandlers {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     validateRequiredParams({ keyword }, ['keyword']);
     const result = await this.feedService.searchFeeds(keyword!, browserPath);
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleGetNoteDetail(
@@ -99,7 +99,7 @@ export class ToolHandlers {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     validateRequiredParams({ feedId, xsecToken }, ['feedId', 'xsecToken']);
     const result = await this.feedService.getFeedDetail(feedId!, xsecToken!, browserPath);
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleCommentOnNote(
@@ -110,7 +110,7 @@ export class ToolHandlers {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     validateRequiredParams({ feedId, xsecToken, note }, ['feedId', 'xsecToken', 'note']);
     const result = await this.feedService.commentOnFeed(feedId!, xsecToken!, note!, browserPath);
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handlePublishContent(
@@ -150,7 +150,7 @@ export class ToolHandlers {
       tags,
       browserPath
     );
-    return createToolResponse(result);
+    return createMcpToolResponse(result);
   }
 
   async handleToolRequest(
@@ -204,9 +204,9 @@ export class ToolHandlers {
       }
     } catch (error) {
       if (error instanceof XHSError) {
-        return createToolResponse(error.toDict());
+        return createMcpToolResponse(error.toJSON());
       }
-      return createErrorResponse(error);
+      return createMcpErrorResponse(error);
     }
   }
 }

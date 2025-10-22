@@ -22,7 +22,7 @@ export class XHSError extends Error {
     this.originalError = originalError;
   }
 
-  toDict(): XHSResponse {
+  toJSON(): XHSResponse {
     const result: XHSResponse = {
       success: false,
       error: this.errorCode,

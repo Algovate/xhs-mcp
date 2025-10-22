@@ -136,7 +136,7 @@ export function getTitleWidth(title: string): number {
  * console.log(`You can add ${remaining} more units`);
  * ```
  */
-export function getRemainingTitleWidth(title: string): number {
+export function calculateRemainingTitleWidth(title: string): number {
   const currentWidth = getTitleWidth(title);
   return Math.max(0, XHS_TITLE_CONSTRAINTS.MAX_WIDTH - currentWidth);
 }
@@ -228,7 +228,7 @@ export function getTitleWidthBreakdown(title: string): {
     totalWidth,
     totalChars: title.length,
     maxWidth: XHS_TITLE_CONSTRAINTS.MAX_WIDTH,
-    remaining: getRemainingTitleWidth(title),
+    remaining: calculateRemainingTitleWidth(title),
     valid: totalWidth <= XHS_TITLE_CONSTRAINTS.MAX_WIDTH,
     breakdown,
   };

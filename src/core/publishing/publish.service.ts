@@ -194,7 +194,7 @@ export class PublishService extends BaseService {
     }
 
     // Process image paths - download URLs and validate local paths
-    const resolvedPaths = await this.processImagePaths(imagePaths);
+    const resolvedPaths = await this.validateAndResolveImagePaths(imagePaths);
 
     // Wait for upload container selector
     const uploadSelector = 'div.upload-content';
@@ -235,7 +235,7 @@ export class PublishService extends BaseService {
           await sleep(3000);
         }
 
-        let hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(
+        let hasUploadContainer = await this.getBrowserManager().tryWaitForSelector(
           page,
           uploadSelector,
           30000
@@ -252,7 +252,7 @@ export class PublishService extends BaseService {
           ];
 
           for (const selector of alternativeSelectors) {
-            hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(
+            hasUploadContainer = await this.getBrowserManager().tryWaitForSelector(
               page,
               selector,
               10000
@@ -301,7 +301,7 @@ export class PublishService extends BaseService {
         }
 
         // Submit the note
-        await this.submitPublish(page);
+        await this.submitPost(page);
 
         // Wait for completion and check result
         await this.waitForPublishCompletion(page);
@@ -330,7 +330,7 @@ export class PublishService extends BaseService {
   /**
    * Process image paths - download URLs and validate local paths
    */
-  private async processImagePaths(imagePaths: string[]): Promise<string[]> {
+  private async validateAndResolveImagePaths(imagePaths: string[]): Promise<string[]> {
     // Use ImageDownloader to process paths (downloads URLs, validates local paths)
     const resolvedPaths = await this.imageDownloader.processImagePaths(imagePaths);
 
@@ -834,7 +834,7 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async submitPublish(page: Page): Promise<void> {
+  private async submitPost(page: Page): Promise<void> {
     const submitSelector = 'div.submit div.d-button-content';
     const submitButton = await page.$(submitSelector);
 
@@ -1177,7 +1177,7 @@ export class PublishService extends BaseService {
     }
 
     // Submit the video
-    await this.submitPublish(page);
+    await this.submitPost(page);
 
     // Wait for completion and check result (videos need longer timeout)
     await this.waitForVideoPublishCompletion(page);

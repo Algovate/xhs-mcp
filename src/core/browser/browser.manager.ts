@@ -29,12 +29,12 @@ export class BrowserManager {
   async createPage(
     headless?: boolean,
     executablePath?: string,
-    loadCookiesFlag: boolean = true
+    shouldLoadCookies: boolean = true
   ): Promise<Page> {
     try {
       // Use browser pool if enabled
       if (this.usePool && this.browserPool) {
-        return await this.createPageFromPool(loadCookiesFlag);
+        return await this.createPageFromPool(shouldLoadCookies);
       }
 
       // Fallback to traditional browser management
@@ -51,7 +51,7 @@ export class BrowserManager {
       page.setDefaultNavigationTimeout(this.config.browser.navigationTimeout);
 
       // Load cookies if requested
-      if (loadCookiesFlag) {
+      if (shouldLoadCookies) {
         await this.loadCookiesIntoPage(page);
       }
 
@@ -65,7 +65,7 @@ export class BrowserManager {
   /**
    * Create a page using the browser pool
    */
-  private async createPageFromPool(loadCookiesFlag: boolean = true): Promise<Page> {
+  private async createPageFromPool(shouldLoadCookies: boolean = true): Promise<Page> {
     if (!this.browserPool) {
       throw new XHSError('Browser pool not initialized', 'BrowserPoolError');
     }
@@ -81,7 +81,7 @@ export class BrowserManager {
       page.setDefaultNavigationTimeout(this.config.browser.navigationTimeout);
 
       // Load cookies if requested
-      if (loadCookiesFlag) {
+      if (shouldLoadCookies) {
         await this.loadCookiesIntoPage(page);
       }
 
@@ -176,8 +176,8 @@ export class BrowserManager {
     try {
       const cookies = await page.cookies();
 
-      // Convert Puppeteer cookie format to our format
-      const ourCookies: Cookie[] = cookies.map((cookie) => ({
+      // Convert Puppeteer cookie format to app format
+      const appCookies: Cookie[] = cookies.map((cookie) => ({
         name: cookie.name,
         value: cookie.value,
         domain: cookie.domain,
@@ -188,7 +188,7 @@ export class BrowserManager {
         sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None',
       }));
 
-      saveCookies(ourCookies);
+      saveCookies(appCookies);
     } catch (error) {
       logger.error(`Failed to save cookies: ${error}`);
       throw this.handlePuppeteerError(error as Error, 'save_cookies');
@@ -228,7 +228,7 @@ export class BrowserManager {
     }
   }
 
-  async waitForSelectorSafe(
+  async tryWaitForSelector(
     page: Page,
     selector: string,
     timeout?: number,
@@ -248,12 +248,12 @@ export class BrowserManager {
     }
   }
 
-  async waitForElementVisible(page: Page, selector: string, timeout?: number): Promise<boolean> {
-    return this.waitForSelectorSafe(page, selector, timeout, true);
+  async waitForSelectorVisible(page: Page, selector: string, timeout?: number): Promise<boolean> {
+    return this.tryWaitForSelector(page, selector, timeout, true);
   }
 
-  async waitForElementHidden(page: Page, selector: string, timeout?: number): Promise<boolean> {
-    return this.waitForSelectorSafe(page, selector, timeout, false);
+  async waitForSelectorHidden(page: Page, selector: string, timeout?: number): Promise<boolean> {
+    return this.tryWaitForSelector(page, selector, timeout, false);
   }
 
   async cleanup(): Promise<void> {
@@ -311,20 +311,20 @@ export class BrowserManager {
     }
   }
 
-  private handlePuppeteerError(error: Error, operation: string): XHSError {
-    const context = { operation };
+  private handlePuppeteerError(error: Error, operationName: string): XHSError {
+    const context = { operationName };
 
     if (error.name === 'TimeoutError') {
-      if (operation.toLowerCase().includes('login')) {
+      if (operationName.toLowerCase().includes('login')) {
         return new XHSError(
-          `Login operation timed out during ${operation}`,
+          `Login operation timed out during ${operationName}`,
           'LoginTimeoutError',
           context,
           error
         );
       } else {
         return new XHSError(
-          `Browser operation timed out: ${operation}`,
+          `Browser operation timed out: ${operationName}`,
           'BrowserError',
           context,
           error
@@ -333,13 +333,13 @@ export class BrowserManager {
     } else {
       if (error.message.toLowerCase().includes('navigation')) {
         return new BrowserNavigationError(
-          `Navigation failed during ${operation}: ${error.message}`,
+          `Navigation failed during ${operationName}: ${error.message}`,
           context,
           error
         );
       } else {
         return new XHSError(
-          `Browser error during ${operation}: ${error.message}`,
+          `Browser error during ${operationName}: ${error.message}`,
           'BrowserError',
           context,
           error
@@ -359,7 +359,7 @@ export function getBrowserManager(usePool: boolean = false): BrowserManager {
   return globalBrowserManager;
 }
 
-export function getBrowserManagerWithPool(): BrowserManager {
+export function getPooledBrowserManager(): BrowserManager {
   return getBrowserManager(true);
 }
 

@@ -20,7 +20,7 @@ function getTitleWidth(title) {
   return stringWidth(title);
 }
 
-function getRemainingTitleWidth(title) {
+function calculateRemainingTitleWidth(title) {
   const currentWidth = getTitleWidth(title);
   return Math.max(0, XHS_TITLE_CONSTRAINTS.MAX_WIDTH - currentWidth);
 }
@@ -102,7 +102,7 @@ function getTitleWidthBreakdown(title) {
     totalWidth,
     totalChars: title.length,
     maxWidth: XHS_TITLE_CONSTRAINTS.MAX_WIDTH,
-    remaining: getRemainingTitleWidth(title),
+    remaining: calculateRemainingTitleWidth(title),
     valid: totalWidth <= XHS_TITLE_CONSTRAINTS.MAX_WIDTH,
     breakdown,
   };
@@ -154,7 +154,7 @@ testCases.forEach((testCase, index) => {
   const { title, description } = testCase;
   const result = validateTitleWidth(title);
   const width = getTitleWidth(title);
-  const remaining = getRemainingTitleWidth(title);
+  const remaining = calculateRemainingTitleWidth(title);
 
   console.log(`\nTest ${index + 1}: ${description}`);
   console.log('─'.repeat(60));

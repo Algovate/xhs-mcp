@@ -114,7 +114,7 @@ export function validatePublishNoteParams(title: string, note: string, imagePath
  * @param error - Optional error information
  * @returns Standardized response object
  */
-export function createResponse<T = unknown>(
+export function createApiResponse<T = unknown>(
   success: boolean,
   data?: T,
   message?: string,
@@ -166,7 +166,7 @@ export async function retryWithBackoff<T>(
  * @param data - Data to include in the response
  * @returns Standardized MCP response format
  */
-export function createToolResponse<T = unknown>(
+export function createMcpToolResponse<T = unknown>(
   data: T
 ): { content: Array<{ type: string; text: string }> } {
   return {
@@ -184,7 +184,7 @@ export function createToolResponse<T = unknown>(
  * @param error - Error to format
  * @returns Standardized MCP error response format
  */
-export function createErrorResponse(error: unknown): {
+export function createMcpErrorResponse(error: unknown): {
   content: Array<{ type: string; text: string }>;
 } {
   const errorData =

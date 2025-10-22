@@ -291,7 +291,7 @@ export class FeedService extends BaseService {
 
         // Click on comment input
         const commentInputSelector = 'div.input-box div.content-edit span';
-        if (!(await this.getBrowserManager().waitForSelectorSafe(page, commentInputSelector))) {
+        if (!(await this.getBrowserManager().tryWaitForSelector(page, commentInputSelector))) {
           throw new FeedError('Comment input not found on page', {
             feedId,
             selector: commentInputSelector,
