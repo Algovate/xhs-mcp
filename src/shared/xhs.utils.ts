@@ -118,3 +118,101 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
     return false;
   }
 }
+
+export async function getLoginStatusWithProfile(page: Page): Promise<{
+  isLoggedIn: boolean;
+  profile?: {
+    userId?: string;
+    nickname?: string;
+    username?: string;
+    avatar?: string;
+    followers?: number;
+    following?: number;
+    likes?: number;
+    xhsNumber?: string;
+    ipLocation?: string;
+    profileUrl?: string;
+  };
+}> {
+  try {
+    // First check if logged in using the existing method
+    const elements = await page.$$(LOGIN_OK_SELECTOR);
+    const isLoggedIn = elements.length > 0;
+
+    if (!isLoggedIn) {
+      return { isLoggedIn: false };
+    }
+
+    // If logged in, try to extract profile information from current page
+    let profileData: any = {};
+    try {
+      profileData = await page.evaluate(() => {
+        const profile: any = {};
+
+        // Extract user ID from URL if on profile page
+        const urlMatch = window.location.href.match(/\/user\/profile\/([a-f0-9]+)/);
+        if (urlMatch) {
+          profile.userId = urlMatch[1];
+        }
+
+        // Try to find user nickname
+        const nameElement = document.querySelector('.user-name, [class*="user-name"], [class*="nickname"]');
+        if (nameElement) {
+          profile.nickname = nameElement.textContent?.trim();
+        }
+
+        // Try to find user info text that might contain stats
+        const infoElement = document.querySelector('.user-info, [class*="user-info"]');
+        if (infoElement) {
+          const infoText = infoElement.textContent || '';
+          profile.infoText = infoText;
+
+          // Try to extract numbers from the info text (followers, following, likes)
+          const numbers = infoText.match(/\d+/g);
+          if (numbers && numbers.length >= 3) {
+            // Common pattern: followers, following, likes
+            profile.following = parseInt(numbers[0]) || 0;
+            profile.followers = parseInt(numbers[1]) || 0;
+            profile.likes = parseInt(numbers[2]) || 0;
+          }
+
+          // Extract 小红书号 (XHS number)
+          const xhsMatch = infoText.match(/小红书号：(\d+)/);
+          if (xhsMatch) {
+            profile.xhsNumber = xhsMatch[1];
+          }
+
+          // Extract IP属地 (IP location)
+          const ipMatch = infoText.match(/IP属地：([^0-9]+)/);
+          if (ipMatch) {
+            profile.ipLocation = ipMatch[1].trim();
+          }
+        }
+
+        // Try to find avatar
+        const avatarElement = document.querySelector('img[class*="avatar"], img[class*="profile"], .avatar img, .profile img') as HTMLImageElement;
+        if (avatarElement) {
+          profile.avatar = avatarElement.src;
+        }
+
+        return profile;
+      });
+    } catch (error) {
+      console.error('❌ Error in page.evaluate:', error);
+      profileData = {};
+    }
+
+    return {
+      isLoggedIn: true,
+      profile: Object.keys(profileData).length > 0 ? profileData : undefined
+    };
+  } catch (error) {
+    // If there's an error, fall back to basic login check
+    try {
+      const elements = await page.$$(LOGIN_OK_SELECTOR);
+      return { isLoggedIn: elements.length > 0 };
+    } catch {
+      return { isLoggedIn: false };
+    }
+  }
+}

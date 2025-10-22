@@ -84,6 +84,20 @@ export interface LoginResult {
   message: string;
   status: 'logged_in' | 'logged_out';
   action: 'none' | 'logged_in' | 'logged_out' | 'failed';
+  profile?: UserProfile;
+}
+
+export interface UserProfile {
+  userId?: string;
+  nickname?: string;
+  username?: string;
+  avatar?: string;
+  followers?: number;
+  following?: number;
+  likes?: number;
+  xhsNumber?: string; // 小红书号
+  ipLocation?: string; // IP属地
+  profileUrl?: string; // 用户资料页面URL
 }
 
 export interface StatusResult {
@@ -96,6 +110,7 @@ export interface StatusResult {
   cookiesFile?: string;
   likelyLoggedIn?: boolean;
   urlChecked?: string;
+  profile?: UserProfile;
   error?: string;
 }
 

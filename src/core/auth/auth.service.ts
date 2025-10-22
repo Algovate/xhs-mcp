@@ -6,7 +6,7 @@ import { Config, LoginResult, StatusResult } from '../../shared/types';
 import { LoginTimeoutError, LoginFailedError, NotLoggedInError, XHSError } from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
 import { deleteCookiesFile, getCookiesInfo } from '../../shared/cookies';
-import { isLoggedIn } from '../../shared/xhs.utils';
+import { isLoggedIn, getLoginStatusWithProfile } from '../../shared/xhs.utils';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 
@@ -25,11 +25,46 @@ export class AuthService extends BaseService {
 
         // Check if already logged in
         if (await isLoggedIn(page)) {
+          // Get profile information if already logged in
+          let profile: any = undefined;
+          try {
+            // Find current user's profile link and extract user ID from URL
+            const profileUrl = await page.evaluate(() => {
+              const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
+              const currentUserLink = userLinks.find(link => {
+                const text = link.textContent?.trim();
+                return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+              });
+              return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
+            });
+
+            if (profileUrl) {
+              // Extract user ID from profile URL
+              const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
+              if (userIdMatch) {
+                profile = {
+                  userId: userIdMatch[1],
+                  profileUrl: profileUrl
+                };
+              }
+            }
+
+            // Also try to get additional profile info from current page
+            const loginStatus = await getLoginStatusWithProfile(page);
+            if (loginStatus.profile) {
+              profile = { ...profile, ...loginStatus.profile };
+            }
+          } catch (profileError) {
+            console.error('❌ Failed to get profile information:', profileError);
+            // Continue without profile info
+          }
+
           return {
             success: true,
             message: 'Already logged in',
             status: 'logged_in',
             action: 'none',
+            profile,
           };
         }
 
@@ -70,14 +105,45 @@ export class AuthService extends BaseService {
         // Save cookies after successful login
         await this.getBrowserManager().saveCookiesFromPage(page);
 
-        // Verify login success
+        // Verify login success and get profile information
         await sleep(1000); // Brief wait for page to update
-        if (await isLoggedIn(page)) {
+        const loginStatus = await getLoginStatusWithProfile(page);
+        if (loginStatus.isLoggedIn) {
+          // Try to get additional profile information
+          let profile = loginStatus.profile;
+          try {
+            // Find current user's profile link and extract user ID from URL
+            const profileUrl = await page.evaluate(() => {
+              const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
+              const currentUserLink = userLinks.find(link => {
+                const text = link.textContent?.trim();
+                return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+              });
+              return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
+            });
+
+            if (profileUrl) {
+              // Extract user ID from profile URL
+              const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
+              if (userIdMatch) {
+                profile = {
+                  ...profile,
+                  userId: userIdMatch[1],
+                  profileUrl: profileUrl
+                };
+              }
+            }
+          } catch (profileError) {
+            console.error('❌ Failed to get additional profile information:', profileError);
+            // Continue with existing profile info
+          }
+
           return {
             success: true,
             message: 'Login successful',
             status: 'logged_in',
             action: 'logged_in',
+            profile,
           };
         } else {
           throw new LoginFailedError('Login process completed but authentication verification failed');
@@ -132,13 +198,53 @@ export class AuthService extends BaseService {
       try {
         await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.exploreUrl);
         await sleep(1000); // Wait for page to load
+
+        // First check if logged in
         const loggedIn = await isLoggedIn(page);
+
+        if (!loggedIn) {
+          return {
+            success: true,
+            loggedIn: false,
+            status: 'logged_out',
+            urlChecked: this.getConfig().xhs.exploreUrl,
+          };
+        }
+
+        // If logged in, try to get profile information
+        let profile: any = undefined;
+        try {
+          // Find current user's profile link and extract user ID from URL
+          const profileUrl = await page.evaluate(() => {
+            const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
+            const currentUserLink = userLinks.find(link => {
+              const text = link.textContent?.trim();
+              return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+            });
+            return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
+          });
+
+          if (profileUrl) {
+            // Extract user ID from profile URL
+            const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
+            if (userIdMatch) {
+              profile = {
+                userId: userIdMatch[1],
+                profileUrl: profileUrl
+              };
+            }
+          }
+        } catch (profileError) {
+          console.error('❌ Failed to get profile information:', profileError);
+          // Continue without profile info
+        }
 
         return {
           success: true,
-          loggedIn,
-          status: loggedIn ? 'logged_in' : 'logged_out',
+          loggedIn: true,
+          status: 'logged_in',
           urlChecked: this.getConfig().xhs.exploreUrl,
+          profile,
         };
       } finally {
         await page.close();

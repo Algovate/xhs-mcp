@@ -43,12 +43,18 @@ async function main(): Promise<void> {
   }
 
   function printSuccess(result: unknown, message?: string): void {
-    const payload = {
-      success: true,
-      message: message ?? (result as { message?: string })?.message ?? undefined,
-      data: result,
-    };
-    writeJson(payload, 0);
+    // If result already has success field, print it directly
+    if (result && typeof result === 'object' && 'success' in result) {
+      writeJson(result, 0);
+    } else {
+      // Otherwise, wrap it
+      const payload = {
+        success: true,
+        message: message ?? (result as { message?: string })?.message ?? undefined,
+        data: result,
+      };
+      writeJson(payload, 0);
+    }
   }
 
   function printError(error: unknown, code?: string): void {
