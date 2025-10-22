@@ -166,6 +166,48 @@ export const XHS_TOOL_SCHEMAS: ToolSchema[] = [
       required: ['type', 'title', 'content', 'media_paths'],
     },
   },
+  {
+    name: 'xhs_get_user_notes',
+    description: 'Get current user notes list.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Number of notes to fetch (default: 20)',
+        },
+        cursor: {
+          type: 'string',
+          description: 'Pagination cursor for next page',
+        },
+        browser_path: {
+          type: 'string',
+          description: 'Optional custom browser binary path',
+        },
+      },
+    },
+  },
+  {
+    name: 'xhs_delete_note',
+    description: 'Delete a user note by ID or delete the last published note.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        note_id: {
+          type: 'string',
+          description: 'Specific note ID to delete (optional if last_published is true)',
+        },
+        last_published: {
+          type: 'boolean',
+          description: 'Delete the last published note (optional if note_id is provided)',
+        },
+        browser_path: {
+          type: 'string',
+          description: 'Optional custom browser binary path',
+        },
+      },
+    },
+  },
 ];
 
 export const XHS_RESOURCE_SCHEMAS = [

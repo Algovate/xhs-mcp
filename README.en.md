@@ -25,6 +25,7 @@ Unified CLI `xhs-mcp` with built-in MCP server subcommand. Automate XiaoHongShu 
   - Support local paths and URLs mixed
   - Smart caching to avoid duplicate downloads
 - Discover: home feeds, keyword search, note detail, comment
+- User Notes: list, delete management
 - Automation: Puppeteer-driven, headless mode, cookie management
 
 ## 📋 Tools
@@ -32,6 +33,7 @@ Unified CLI `xhs-mcp` with built-in MCP server subcommand. Automate XiaoHongShu 
 - `xhs_auth_login`, `xhs_auth_logout`, `xhs_auth_status`
 - `xhs_discover_feeds`, `xhs_search_note`, `xhs_get_note_detail`
 - `xhs_comment_on_note`
+- `xhs_get_user_notes`, `xhs_delete_note` (user note management)
 - `xhs_publish_content` (unified interface: `type`, `title`, `content`, `media_paths`, `tags`)
   - **Images**: 1-18 image files or URLs
   - **Videos**: exactly 1 video file
@@ -89,6 +91,10 @@ npx xhs-mcp search -k keyword
 
 # Current user's notes
 npx xhs-mcp usernote list [-l 20] [--cursor <cursor>]
+
+# Delete user notes
+npx xhs-mcp usernote delete --note-id <id>
+npx xhs-mcp usernote delete --last-published
 
 # Interact
 npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!"

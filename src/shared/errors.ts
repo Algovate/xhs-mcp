@@ -130,3 +130,9 @@ export class NoteParsingError extends NoteError {
     super(message, context, originalError);
   }
 }
+
+export class DeleteError extends XHSError {
+  constructor(message: string, context?: XHSErrorContext, originalError?: Error) {
+    super(message, 'DeleteError', context, originalError);
+  }
+}

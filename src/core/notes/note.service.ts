@@ -8,6 +8,7 @@ import { BaseService } from '../../shared/base.service';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { ProfileError, NoteParsingError, NotLoggedInError } from '../../shared/errors';
+import { DeleteService, DeleteResult } from '../deleting/delete.service';
 
 export interface UserNote {
   readonly id: string;
@@ -66,8 +67,11 @@ const NOTE_SELECTORS = {
 } as const;
 
 export class NoteService extends BaseService {
+  private deleteService: DeleteService;
+
   constructor(config: Config) {
     super(config);
+    this.deleteService = new DeleteService(config);
   }
 
   /**
@@ -417,5 +421,24 @@ export class NoteService extends BaseService {
    */
   private getNextCursor(notes: UserNote[]): string | undefined {
     return notes.length > 0 ? notes[notes.length - 1].id : undefined;
+  }
+
+  /**
+   * Delete a specific note by ID
+   * @param noteId - The ID of the note to delete
+   * @param browserPath - Optional custom browser path
+   * @returns Promise<DeleteResult> - Delete operation result
+   */
+  async deleteNote(noteId: string, browserPath?: string): Promise<DeleteResult> {
+    return this.deleteService.deleteNote(noteId, browserPath);
+  }
+
+  /**
+   * Delete the last published note
+   * @param browserPath - Optional custom browser path
+   * @returns Promise<DeleteResult> - Delete operation result
+   */
+  async deleteLastPublishedNote(browserPath?: string): Promise<DeleteResult> {
+    return this.deleteService.deleteLastPublishedNote(browserPath);
   }
 }

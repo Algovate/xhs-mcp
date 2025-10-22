@@ -5,6 +5,7 @@
 import { AuthService } from '../../core/auth/auth.service';
 import { FeedService } from '../../core/feeds/feed.service';
 import { PublishService } from '../../core/publishing/publish.service';
+import { NoteService } from '../../core/notes/note.service';
 import { getConfig } from '../../shared/config';
 import { XHSError } from '../../shared/errors';
 import {
@@ -20,12 +21,14 @@ export class ToolHandlers {
   private authService: AuthService;
   private feedService: FeedService;
   private publishService: PublishService;
+  private noteService: NoteService;
 
   constructor() {
     const config = getConfig();
     this.authService = new AuthService(config);
     this.feedService = new FeedService(config);
     this.publishService = new PublishService(config);
+    this.noteService = new NoteService(config);
   }
 
   async handleAuthLogin(
@@ -153,6 +156,31 @@ export class ToolHandlers {
     return createMcpToolResponse(result);
   }
 
+  async handleGetUserNotes(
+    limit?: number,
+    cursor?: string,
+    browserPath?: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const result = await this.noteService.getUserNotes(limit, cursor, browserPath);
+    return createMcpToolResponse(result);
+  }
+
+  async handleDeleteNote(
+    noteId?: string,
+    lastPublished?: boolean,
+    browserPath?: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (lastPublished) {
+      const result = await this.noteService.deleteLastPublishedNote(browserPath);
+      return createMcpToolResponse(result);
+    } else if (noteId) {
+      const result = await this.noteService.deleteNote(noteId, browserPath);
+      return createMcpToolResponse(result);
+    } else {
+      throw new Error('Either note_id or last_published must be specified');
+    }
+  }
+
   async handleToolRequest(
     name: string,
     args: any
@@ -196,6 +224,20 @@ export class ToolHandlers {
             args?.content as string,
             args?.media_paths as string[],
             args?.tags as string,
+            args?.browser_path as string
+          );
+
+        case 'xhs_get_user_notes':
+          return await this.handleGetUserNotes(
+            args?.limit as number,
+            args?.cursor as string,
+            args?.browser_path as string
+          );
+
+        case 'xhs_delete_note':
+          return await this.handleDeleteNote(
+            args?.note_id as string,
+            args?.last_published as boolean,
             args?.browser_path as string
           );
 

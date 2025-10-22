@@ -26,6 +26,7 @@
   - 支持 URL 和本地路径混合使用
   - 智能缓存机制，避免重复下载
 - 发现：推荐、搜索、详情、评论
+- 用户笔记：列表查看、删除管理
 - 自动化：Puppeteer 驱动、无头模式、Cookie 管理
 
 ## 📋 可用工具
@@ -33,6 +34,7 @@
 - `xhs_auth_login`、`xhs_auth_logout`、`xhs_auth_status`
 - `xhs_discover_feeds`、`xhs_search_note`、`xhs_get_note_detail`
 - `xhs_comment_on_note`
+- `xhs_get_user_notes`、`xhs_delete_note`（用户笔记管理）
 - `xhs_publish_content`（统一发布接口：`type`、`title`、`content`、`media_paths`、`tags`）
   - **图片发布**：1-18个图片文件或URL
   - **视频发布**：恰好1个视频文件
@@ -112,6 +114,10 @@ npx xhs-mcp search -k 关键字 [-b /path/to/chromium]
 
 # 当前用户笔记
 npx xhs-mcp usernote list [-l 20] [--cursor <cursor>] [-b /path/to/chromium]
+
+# 删除用户笔记
+npx xhs-mcp usernote delete --note-id <id> [-b /path/to/chromium]
+npx xhs-mcp usernote delete --last-published [-b /path/to/chromium]
 
 # 互动
 npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!" [-b /path/to/chromium]

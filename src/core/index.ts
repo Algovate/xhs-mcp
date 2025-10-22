@@ -16,3 +16,6 @@ export * from './publishing';
 
 // User notes module
 export * from './notes';
+
+// Delete module
+export * from './deleting';

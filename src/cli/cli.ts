@@ -23,19 +23,39 @@ class CLIUtils {
 
   formatErrorMessage(error: unknown): string {
     const raw = error instanceof Error ? (error.stack ?? error.message) : String(error);
-    const condensed = raw
-      .replace(
-        /[\s\S]*?Looks like Puppeteer[\s\S]*?Please run the following command to download new browsers:[\s\S]*?npx puppeteer browsers install[\s\S]*?(Puppeteer Team[\s\S]*?)*?/m,
-        ''
-      )
-      .replace(/[\u2500-\u257F]+/g, '') // box-drawing characters
-      .trim();
 
+    // Handle specific error patterns
     if (/Executable doesn't exist|puppeteer browsers install/i.test(raw)) {
       return 'Chromium is not installed. Run: npx puppeteer browsers install chrome or xhs-mcp browser';
     }
 
-    return condensed || (error instanceof Error ? error.message : String(error));
+    // For user-facing errors, just return the message without stack trace
+    if (error instanceof Error) {
+      // Check if it's a known error type that should show just the message
+      if (
+        error.message.includes('Either --note-id or --last-published must be specified') ||
+        error.message.includes('Please specify either') ||
+        error.message.includes('User not logged in') ||
+        error.message.includes('Note not found') ||
+        error.message.includes('Delete button not found')
+      ) {
+        return error.message;
+      }
+
+      // For other errors, show a cleaner version
+      const condensed = raw
+        .replace(
+          /[\s\S]*?Looks like Puppeteer[\s\S]*?Please run the following command to download new browsers:[\s\S]*?npx puppeteer browsers install[\s\S]*?(Puppeteer Team[\s\S]*?)*?/m,
+          ''
+        )
+        .replace(/[\u2500-\u257F]+/g, '') // box-drawing characters
+        .replace(/\s+at\s+.*$/gm, '') // Remove stack trace lines
+        .trim();
+
+      return condensed || error.message;
+    }
+
+    return String(error);
   }
 
   writeJson(output: unknown, exitCode = 0): void {
@@ -63,6 +83,16 @@ class CLIUtils {
   printError(error: unknown, code?: string): void {
     const message = this.formatErrorMessage(error);
     const payload = { success: false, message, code: code ?? undefined, status: 'error' } as const;
+    this.writeJson(payload, 1);
+  }
+
+  printUsageError(command: string, message: string): void {
+    const payload = {
+      success: false,
+      message,
+      status: 'error',
+      usage: `Use 'xhs-mcp ${command} --help' for more information`,
+    } as const;
     this.writeJson(payload, 1);
   }
 }
@@ -220,6 +250,38 @@ async function main(): Promise<void> {
         const limit = parseInt(opts.limit) || 20;
         const result = await noteService.getUserNotes(limit, opts.cursor, opts.browserPath);
         utils.printSuccess(result);
+      } catch (error) {
+        utils.printError(error);
+      }
+    });
+
+  // User Note delete subcommand
+  userNoteCommand
+    .command('delete')
+    .description('Delete user notes')
+    .option('--note-id <id>', 'Specific note ID to delete')
+    .option('--last-published', 'Delete the last published note')
+    .option('-b, --browser-path <path>', 'Custom browser binary path')
+    .action(async (opts: { noteId?: string; lastPublished?: boolean; browserPath?: string }) => {
+      const noteService = new NoteService(config);
+      try {
+        if (opts.lastPublished) {
+          const result = await noteService.deleteLastPublishedNote(opts.browserPath);
+          utils.printSuccess(result);
+        } else if (opts.noteId) {
+          const result = await noteService.deleteNote(opts.noteId, opts.browserPath);
+          utils.printSuccess(result);
+        } else {
+          // Show help instead of JSON error when no arguments provided
+          console.log('Usage: xhs-mcp usernote delete [options]\n');
+          console.log('Delete user notes\n');
+          console.log('Options:');
+          console.log('  --note-id <id>             Specific note ID to delete');
+          console.log('  --last-published           Delete the last published note');
+          console.log('  -b, --browser-path <path>  Custom browser binary path');
+          console.log('  -h, --help                 display help for command');
+          process.exit(0);
+        }
       } catch (error) {
         utils.printError(error);
       }
