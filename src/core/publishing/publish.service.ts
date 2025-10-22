@@ -206,7 +206,20 @@ export class PublishService extends BaseService {
         await this.clickUploadTab(page);
 
         // Wait for tab switch to complete
-        await sleep(2000);
+        await sleep(3000);
+
+        // Check if tab switch was successful and retry if needed
+        const pageState = await page.evaluate(() => {
+          return {
+            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]')).map(el => el.textContent?.trim()).filter(t => t)
+          };
+        });
+
+        // If still showing video upload, try clicking the tab again
+        if (pageState.buttonTexts.includes('上传视频') && !pageState.buttonTexts.includes('上传图文')) {
+          await this.clickUploadTab(page);
+          await sleep(3000);
+        }
 
         let hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(page, uploadSelector, 30000);
 
@@ -239,6 +252,14 @@ export class PublishService extends BaseService {
         // Wait for images to be processed
         await sleep(3000);
 
+
+        // Wait for page to transition to edit mode (check for title or content input)
+        try {
+          await page.waitForSelector('input[placeholder*="标题"], div[contenteditable="true"], .tiptap.ProseMirror', { timeout: 15000 });
+        } catch (error) {
+          // Continue without waiting
+        }
+
         // Wait a bit for the page to settle after image upload
         await sleep(2000);
 
@@ -246,7 +267,7 @@ export class PublishService extends BaseService {
         await this.fillTitle(page, title);
 
         // Wait a bit more for content area to appear
-        await sleep(1000);
+        await sleep(2000);
 
         // Fill in content
         await this.fillContent(page, content);
@@ -294,8 +315,8 @@ export class PublishService extends BaseService {
     // Validate resolved paths
     for (const resolvedPath of resolvedPaths) {
       // For local paths that aren't absolute, resolve them
-      const fullPath = resolvedPath.startsWith('/') || resolvedPath.match(/^[a-zA-Z]:/) 
-        ? resolvedPath 
+      const fullPath = resolvedPath.startsWith('/') || resolvedPath.match(/^[a-zA-Z]:/)
+        ? resolvedPath
         : join(process.cwd(), resolvedPath);
 
       if (!existsSync(fullPath)) {
@@ -345,12 +366,47 @@ export class PublishService extends BaseService {
       }
 
       if (tabs.length === 0) {
-        logger.warn('No tabs found');
+        // Try to find all clickable elements that might be tabs
+        const allClickable = await page.$$('*');
+        const possibleTabs: any[] = [];
+
+        for (const element of allClickable.slice(0, 50)) { // Limit to first 50 elements
+          try {
+            const tagName = await page.evaluate(el => el.tagName, element);
+            const text = await page.evaluate(el => el.textContent, element);
+            const isVisible = await element.isIntersectingViewport();
+
+            if (isVisible && text && (
+              text.includes('上传视频') ||
+              text.includes('上传图文') ||
+              text.includes('写长文') ||
+              text.includes('视频') ||
+              text.includes('图文') ||
+              text.includes('图片')
+            )) {
+              possibleTabs.push({ element, text: text.trim() });
+            }
+          } catch (error) {
+            // Ignore errors
+          }
+        }
+
+        // Look for image/text upload tab
+        for (const tab of possibleTabs) {
+          if (tab.text.includes('上传图文') || tab.text.includes('图文') || tab.text.includes('图片')) {
+            await tab.element.click();
+            await sleep(2000);
+            return;
+          }
+        }
+
         return;
       }
 
       // Look for the "上传图文" (upload image/text) tab specifically
       let imageTextTab: any = null;
+      const tabTexts: string[] = [];
+
       for (let i = 0; i < tabs.length; i++) {
         const tab = tabs[i];
         try {
@@ -358,6 +414,9 @@ export class PublishService extends BaseService {
           if (!isVisible) continue;
 
           const text = await page.evaluate(el => el.textContent, tab);
+          if (text) {
+            tabTexts.push(text.trim());
+          }
 
           // Check if this is the image/text upload tab
           if (text && (text.includes('上传图文') || text.includes('图文') || text.includes('图片'))) {
@@ -412,7 +471,7 @@ export class PublishService extends BaseService {
     for (const imagePath of imagePaths) {
       try {
         await fileInput.uploadFile(imagePath);
-        await sleep(1000); // Wait between uploads
+        await sleep(1500); // Wait between uploads
       } catch (error) {
         throw new PublishError(`Failed to upload image ${imagePath}: ${error}`);
       }
@@ -482,29 +541,72 @@ export class PublishService extends BaseService {
   }
 
   private async findContentElement(page: Page): Promise<any | null> {
-    // Strategy 1: Try div.ql-editor (primary selector)
-    const qlEditor = await page.$('div.ql-editor');
-    if (qlEditor) {
-      return qlEditor;
-    }
-
-    // Strategy 2: Try to find textarea or contenteditable
-    const contentSelectors = [
-      'textarea[placeholder*="正文"]',
-      'div[contenteditable="true"]',
-      'div[data-placeholder*="正文"]',
-      '.content-editor',
-      'div[role="textbox"]'
-    ];
-
-    for (const selector of contentSelectors) {
-      const element = await page.$(selector);
-      if (element) {
-        return element;
+    try {
+      // Strategy 1: Try div[contenteditable="true"] (simple and direct)
+      const contentEditable = await page.$('div[contenteditable="true"]');
+      if (contentEditable) {
+        const isVisible = await contentEditable.isIntersectingViewport();
+        if (isVisible) {
+          return contentEditable;
+        }
       }
-    }
 
-    return null;
+      // Strategy 2: Try div.tiptap.ProseMirror (primary selector for creator platform)
+      const tiptapEditor = await page.$('div.tiptap.ProseMirror');
+      if (tiptapEditor) {
+        const isVisible = await tiptapEditor.isIntersectingViewport();
+        if (isVisible) {
+          return tiptapEditor;
+        }
+      }
+
+      // Strategy 3: Try div[role="textbox"][contenteditable="true"] (specific selector)
+      const roleTextbox = await page.$('div[role="textbox"][contenteditable="true"]');
+      if (roleTextbox) {
+        const isVisible = await roleTextbox.isIntersectingViewport();
+        if (isVisible) {
+          return roleTextbox;
+        }
+      }
+
+      // Strategy 4: Try div.ql-editor (legacy selector)
+      const qlEditor = await page.$('div.ql-editor');
+      if (qlEditor) {
+        return qlEditor;
+      }
+
+      // Strategy 5: Try to find textarea or contenteditable
+      const contentSelectors = [
+        '.tiptap.ProseMirror',
+        'textarea[placeholder*="正文"]',
+        'textarea[multiline]',
+        'div[data-placeholder*="正文"]',
+        '.content-editor',
+        'div[role="textbox"]',
+        'textbox[role="textbox"]',
+        'textbox[multiline]'
+      ];
+
+      for (const selector of contentSelectors) {
+        const element = await page.$(selector);
+        if (element) {
+          return element;
+        }
+      }
+
+      // Strategy 6: Try to find any multiline textbox (fallback)
+      const multilineTextboxes = await page.$$('textbox[multiline]');
+      for (const element of multilineTextboxes) {
+        const isVisible = await element.isIntersectingViewport();
+        if (isVisible) {
+          return element;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   private async findTextboxByPlaceholder(page: Page): Promise<any | null> {
@@ -537,7 +639,7 @@ export class PublishService extends BaseService {
   private async fillContent(page: Page, content: string): Promise<void> {
     // Wait for content area to appear
     try {
-      await page.waitForSelector('div[contenteditable="true"], textarea, [role="textbox"], .ql-editor', { timeout: 10000 });
+      await page.waitForSelector('div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, textbox[multiline]', { timeout: 10000 });
     } catch (error) {
       // Continue without waiting
     }
@@ -555,7 +657,7 @@ export class PublishService extends BaseService {
     if (!contentElement) {
       // Try to find any contenteditable or textarea element
       try {
-        const allContentElements = await page.$$('div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, p[contenteditable="true"]');
+        const allContentElements = await page.$$('div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, p[contenteditable="true"], textbox[multiline]');
 
         for (let i = 0; i < allContentElements.length; i++) {
           const element = allContentElements[i];
@@ -565,8 +667,9 @@ export class PublishService extends BaseService {
             const contentEditable = await page.evaluate(el => el.getAttribute('contenteditable'), element);
             const role = await page.evaluate(el => el.getAttribute('role'), element);
             const className = await page.evaluate(el => el.className, element);
+            const multiline = await page.evaluate(el => el.getAttribute('multiline'), element);
 
-            if (isVisible && (contentEditable === 'true' || tagName === 'TEXTAREA' || role === 'textbox' || className.includes('ql-editor'))) {
+            if (isVisible && (contentEditable === 'true' || tagName === 'TEXTAREA' || role === 'textbox' || className.includes('ql-editor') || className.includes('tiptap') || multiline === '')) {
               contentElement = element;
               break;
             }
