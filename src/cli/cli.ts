@@ -15,11 +15,13 @@ import { FeedService } from '../core/feeds/feed.service';
 import { PublishService } from '../core/publishing/publish.service';
 import { NoteService } from '../core/notes/note.service';
 
-async function main(): Promise<void> {
-  const config = getConfig();
-  const program = new Command();
+/**
+ * CLI utility functions
+ */
+class CLIUtils {
+  constructor(private program: Command) {}
 
-  function formatErrorMessage(error: unknown): string {
+  formatErrorMessage(error: unknown): string {
     const raw = error instanceof Error ? (error.stack ?? error.message) : String(error);
     const condensed = raw
       .replace(
@@ -36,17 +38,17 @@ async function main(): Promise<void> {
     return condensed || (error instanceof Error ? error.message : String(error));
   }
 
-  function writeJson(output: unknown, exitCode = 0): void {
-    const compact = program.getOptionValue?.('compact') === true;
+  writeJson(output: unknown, exitCode = 0): void {
+    const compact = this.program.getOptionValue?.('compact') === true;
     const json = compact ? JSON.stringify(output) : JSON.stringify(output, null, 2);
     process.stdout.write(`${json}\n`);
     process.exit(exitCode);
   }
 
-  function printSuccess(result: unknown, message?: string): void {
+  printSuccess(result: unknown, message?: string): void {
     // If result already has success field, print it directly
     if (result && typeof result === 'object' && 'success' in result) {
-      writeJson(result, 0);
+      this.writeJson(result, 0);
     } else {
       // Otherwise, wrap it
       const payload = {
@@ -54,15 +56,21 @@ async function main(): Promise<void> {
         message: message ?? (result as { message?: string })?.message ?? undefined,
         data: result,
       };
-      writeJson(payload, 0);
+      this.writeJson(payload, 0);
     }
   }
 
-  function printError(error: unknown, code?: string): void {
-    const message = formatErrorMessage(error);
+  printError(error: unknown, code?: string): void {
+    const message = this.formatErrorMessage(error);
     const payload = { success: false, message, code: code ?? undefined, status: 'error' } as const;
-    writeJson(payload, 1);
+    this.writeJson(payload, 1);
   }
+}
+
+async function main(): Promise<void> {
+  const config = getConfig();
+  const program = new Command();
+  const utils = new CLIUtils(program);
 
   program
     .name('xhs-mcp')
@@ -80,9 +88,9 @@ async function main(): Promise<void> {
       const authService = new AuthService(config);
       try {
         const result = await authService.login(browserPath, timeoutSec);
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
@@ -93,9 +101,9 @@ async function main(): Promise<void> {
       const authService = new AuthService(config);
       try {
         const result = await authService.logout();
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
@@ -107,9 +115,9 @@ async function main(): Promise<void> {
       const authService = new AuthService(config);
       try {
         const result = await authService.checkStatus(browserPath);
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
@@ -134,7 +142,7 @@ async function main(): Promise<void> {
 
       const browserInfo = await canLaunchChromium();
       if (browserInfo.canLaunch) {
-        printSuccess(
+        utils.printSuccess(
           {
             installed: true,
             executablePath: browserInfo.executablePath,
@@ -150,7 +158,7 @@ async function main(): Promise<void> {
 
       const afterInstallInfo = await canLaunchChromium();
       if (afterInstallInfo.canLaunch) {
-        printSuccess(
+        utils.printSuccess(
           {
             installed: true,
             executablePath: afterInstallInfo.executablePath,
@@ -159,7 +167,7 @@ async function main(): Promise<void> {
           'Chromium installed and ready'
         );
       } else {
-        printError(new Error('Failed to install or launch Chromium'));
+        utils.printError(new Error('Failed to install or launch Chromium'));
       }
     });
 
@@ -172,9 +180,9 @@ async function main(): Promise<void> {
       const feedService = new FeedService(config);
       try {
         const result = await feedService.getFeedList(opts.browserPath);
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
@@ -188,15 +196,20 @@ async function main(): Promise<void> {
       const feedService = new FeedService(config);
       try {
         const result = await feedService.searchFeeds(opts.keyword, opts.browserPath);
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
-  // Notes: list user's published notes
-  program
-    .command('note list')
+  // User Notes: unified command with subcommands
+  const userNoteCommand = program
+    .command('usernote')
+    .description('Current user\'s note management operations');
+
+  // User Note list subcommand
+  userNoteCommand
+    .command('list')
     .description('List current user\'s published notes')
     .option('-l, --limit <number>', 'Maximum number of notes to retrieve', '20')
     .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
@@ -206,32 +219,12 @@ async function main(): Promise<void> {
       try {
         const limit = parseInt(opts.limit) || 20;
         const result = await noteService.getUserNotes(limit, opts.cursor, opts.browserPath);
-        printSuccess(result);
+        utils.printSuccess(result);
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 
-  // Feeds: get note detail
-  program
-    .command('note-detail')
-    .description('Get detailed information about a specific note')
-    .requiredOption('--feed-id <id>', 'Feed ID')
-    .requiredOption('--xsec-token <token>', 'Security token for the feed')
-    .option('-b, --browser-path <path>', 'Custom browser binary path')
-    .action(async (opts: { feedId: string; xsecToken: string; browserPath?: string }) => {
-      const feedService = new FeedService(config);
-      try {
-        const result = await feedService.getFeedDetail(
-          opts.feedId,
-          opts.xsecToken,
-          opts.browserPath
-        );
-        printSuccess(result);
-      } catch (error) {
-        printError(error);
-      }
-    });
 
   // Feeds: comment on note
   program
@@ -251,9 +244,9 @@ async function main(): Promise<void> {
             opts.note,
             opts.browserPath
           );
-          printSuccess(result);
-        } catch (error) {
-          printError(error);
+        utils.printSuccess(result);
+      } catch (error) {
+        utils.printError(error);
         }
       }
     );
@@ -283,7 +276,7 @@ async function main(): Promise<void> {
         const publishService = new PublishService(config);
         try {
           if (opts.type !== 'image' && opts.type !== 'video') {
-            printError(new Error('Type must be "image" or "video"'));
+            utils.printError(new Error('Type must be "image" or "video"'));
             return;
           }
 
@@ -299,9 +292,9 @@ async function main(): Promise<void> {
             opts.tags,
             opts.browserPath
           );
-          printSuccess(result);
-        } catch (error) {
-          printError(error);
+        utils.printSuccess(result);
+      } catch (error) {
+        utils.printError(error);
         }
       }
     );
@@ -380,7 +373,7 @@ async function main(): Promise<void> {
           console.log('Use --json for machine-readable output');
         }
       } catch (error) {
-        printError(error);
+        utils.printError(error);
       }
     });
 

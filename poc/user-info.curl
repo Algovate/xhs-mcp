@@ -1,0 +1,19 @@
+curl 'https://creator.xiaohongshu.com/api/galaxy/user/info' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'authorization;' \
+  -b 'abRequestId=4dfd4805-1cc2-55c8-b305-c6e880949a17; a1=1999f9f44fdrm9x57x5ul4en514g2wo50u7y241kg30000182315; webId=b828cd3116782e7afec606a2b5cb97ad; gid=yjjjiji2W084yjjjiji4474yifF6jC2WC271WTk4dI2y4vq8kJEl2J888yYJqy28dSKDd2f8; x-user-id-creator.xiaohongshu.com=578e48db50c4b42cb98d6458; customerClientId=445021149095423; customer-sso-sid=68c517563877934626521089bomw32xndfxz6saf; access-token-creator.xiaohongshu.com=customer.creator.AT-68c517563877934626537472glid1vljc4addbv1; galaxy_creator_session_id=Z2eIaOwRW505QzjJA7UwuKHiRIRIs3RhIJRR; galaxy.creator.beaker.session.id=1761102568071013003102; webBuild=4.83.0; unread={%22ub%22:%2268f75b3b0000000004014cf0%22%2C%22ue%22:%2268f43b5e0000000004015f39%22%2C%22uc%22:29}; web_session=030037afee4223a6d64e4eca802f4a812ade1f; acw_tc=0a0d096b17611202333794030e50095af0af5e3977789f803b2b317753723c; xsecappid=ugc; websectiga=984412fef754c018e472127b8effd174be8a5d51061g991aadd200c69a2801d6; sec_poison_id=dafe682f-9c0c-4db8-9695-06e58c63bf32; loadts=1761120579152' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://creator.xiaohongshu.com/new/note-manager?source=official' \
+  -H 'sec-ch-ua: "Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36' \
+  -H 'x-b3-traceid: 26a79a63e8f6e8a3' \
+  -H 'x-s: XYS_2UQhPsHCH0c1PjhhHjIj2erjwjQM89PjNsQhPjHCHDMYGUmOLUHVHdWAH0ijJnEAPeHIPpu9/p+m+LRlPM8ztURtanQw/au7/p8GLoD78dY1aS+i+/WMLbQCyrQ1+DhF4pi9PDRBP98aqauApf4CpoLA/9clJBEEGD+CJMQPyFWM+Amz2LrhapbU2b+C4drF/bzBp7DMLeSr4bQQzMbV8g49neD6/BT8tAplPpDEyb4H/dYLP7YSyDkpLnbU/7YCcn+B4rYGLLVh+rSG8FENPgzLzgmMJem3zsR+O/FjNsQh+sHCHjQR' \
+  -H 'x-s-common: 2UQAPsHCPUIjqArjwjHjNsQhPsHCH0rjNsQhPaHCH0c1PjhhHjIj2eHjwjQ+GnPW/MPjNsQhPUHCHdpdGUHVHdWFH0ijPshEPUhMHjIj2eLjwjHlw/DE80Sf+ezf8oQTwgWM+7WM4nIF8nhMP/zdPd46+/mM+7DU+eb38APIPeZIP/WUPArMHjIj2eGjwjHjNsQh+UHCHjHVHdWhH0ija/PhqDYD87+xJ7mdag8Sq9zn494QcUT6aLpPJLQy+nLApd4G/B4BprShLA+jqg4bqD8S8gYDPBp3Jf+m2DMBnnEl4BYQyrkSL9E+zrTM4bQQPFTAnnRUpFYc4r4UGfDILeSg8DSkN9pgGA8SngbF2pbmqbmQPA4Sy9Ma+SbPtApQy/8A8BE68p+fqpSHqg4VPdbF+LHIzBRQ2sV3zFzkN7+n4BTQ2emA2op7q0zl4BSQyopYaLLA8/+Pp0mQPM8LaLP78/mM4BIUcLzTqFl98Lz/a7+/LoqMaLp9q9Sn4rkOqgqhcdp78SmI8BpLzS4OagWFprSk4/8yLo4ULopF+LS9JBbPGf4AP7bF2rSh8gPlpd4HanTMJLS3agSSyf4AnaRgpB4S+9p/qgzSNFc7qFz0qBSI8nzSngQr4rSe+fprpdqUaLpwqM+l4Bl1Jb+M/fkn4rS9J9p3qgcAGMi7qM86+B4Qzp+EanYb8UVEzbpQ4dkE+rDh/FSkGA4yLo4mag8kL0z6N7+r/BzA+Sm7pDSe+9p/8e4Sy0S/+rSb4dPAapm+4b87pLSk8oPAqURA2bkw8nSn4BQ0pnpSnp87yrS9zgk0N9zS8S87LfqEcg+rLo4yagYV4rShnS+64g4O8M87qo+U+BYSpaRS+Dl98Lzc4F8Q4f4APgQ6qAbrnfSQy/4AyfQ6qA+dqD8Qz/mSPMmF4DSkGSQOqg4O/7bFyrSh8gPlpd4raLpd8nTn4ApQye+Aydp7+LEl49E6pd4MaL+0yFDAaoQwwnSkaf+m8/bM478QyAzTanYDqFzl4FVU8MzUG0SO8p4DqrzQyrzPadbFa9bl47pQ408S+S8F2bbPN9pnJ/4APFl+JFSi8gP9c04Apop7z7mM4FRQcFkSpM87yLS389phySQ7ag8S8p+6N9pfpdz/a/P7q9Tl47pw8bbcanYHqrSe89pxyDbALMiIqMG6N9pk4g48ag8TaFSbpd+t4g43anTrJFSh4fprcnT7qrMD8/bl49lQ2bGIqpm7JgQfN9pnp/mAy7pF/D4l49bQ2BTmanSU4Fll4rlSqgzdagYd8nz/8o+kqg4cqS8FwsHVHdWEH0iTP/qMw/ZM+/HI+sIj2erIH0iINsQhP/rjwjQ1J7QTGnIjKc==' \
+  -H 'x-t: 1761120579175' \
+  -H 'x-xray-traceid: cd057bb729874d4528416a95f33900db'

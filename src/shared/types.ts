@@ -2,209 +2,269 @@
  * Type definitions for XHS MCP Server
  */
 
+/**
+ * Standard response format for all XHS operations
+ */
 export interface XHSResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-  operation?: string;
-  context?: Record<string, unknown>;
+  readonly success: boolean;
+  readonly data?: T;
+  readonly message?: string;
+  readonly error?: string;
+  readonly operation?: string;
+  readonly context?: Record<string, unknown>;
 }
 
+/**
+ * Browser automation configuration
+ */
 export interface BrowserConfig {
-  defaultTimeout: number;
-  loginTimeout: number;
-  pageLoadTimeout: number;
-  navigationTimeout: number;
-  slowmo: number;
-  headlessDefault: boolean;
+  readonly defaultTimeout: number;
+  readonly loginTimeout: number;
+  readonly pageLoadTimeout: number;
+  readonly navigationTimeout: number;
+  readonly slowmo: number;
+  readonly headlessDefault: boolean;
 }
 
+/**
+ * MCP server configuration
+ */
 export interface ServerConfig {
-  name: string;
-  version: string;
-  description: string;
-  defaultHost: string;
-  defaultPort: number;
-  defaultTransport: 'stdio' | 'sse' | 'streamable-http';
+  readonly name: string;
+  readonly version: string;
+  readonly description: string;
+  readonly defaultHost: string;
+  readonly defaultPort: number;
+  readonly defaultTransport: 'stdio' | 'sse' | 'streamable-http';
 }
 
+/**
+ * Logging configuration
+ */
 export interface LoggingConfig {
-  level: string;
-  format: string;
-  fileEnabled: boolean;
-  filePath?: string;
+  readonly level: string;
+  readonly format: string;
+  readonly fileEnabled: boolean;
+  readonly filePath?: string;
 }
 
+/**
+ * File paths configuration
+ */
 export interface PathsConfig {
-  appDataDir: string;
-  cookiesFile: string;
+  readonly appDataDir: string;
+  readonly cookiesFile: string;
 }
 
+/**
+ * XiaoHongShu platform configuration
+ */
 export interface XHSConfig {
-  homeUrl: string;
-  exploreUrl: string;
-  searchUrl: string;
-  creatorPublishUrl: string;
-  creatorVideoPublishUrl: string;
-  loginOkSelector: string;
-  requestDelay: number;
-  maxRetries: number;
-  retryDelay: number;
+  readonly homeUrl: string;
+  readonly exploreUrl: string;
+  readonly searchUrl: string;
+  readonly creatorPublishUrl: string;
+  readonly creatorVideoPublishUrl: string;
+  readonly loginOkSelector: string;
+  readonly requestDelay: number;
+  readonly maxRetries: number;
+  readonly retryDelay: number;
 }
 
+/**
+ * Main application configuration
+ */
 export interface Config {
-  browser: BrowserConfig;
-  server: ServerConfig;
-  logging: LoggingConfig;
-  paths: PathsConfig;
-  xhs: XHSConfig;
+  readonly browser: BrowserConfig;
+  readonly server: ServerConfig;
+  readonly logging: LoggingConfig;
+  readonly paths: PathsConfig;
+  readonly xhs: XHSConfig;
 }
 
+/**
+ * HTTP cookie structure
+ */
 export interface Cookie {
-  name: string;
-  value: string;
-  domain: string;
-  path: string;
-  expires?: number;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: 'Strict' | 'Lax' | 'None';
+  readonly name: string;
+  readonly value: string;
+  readonly domain: string;
+  readonly path: string;
+  readonly expires?: number;
+  readonly httpOnly?: boolean;
+  readonly secure?: boolean;
+  readonly sameSite?: 'Strict' | 'Lax' | 'None';
 }
 
+/**
+ * Cookie file information
+ */
 export interface CookiesInfo {
-  filePath: string;
-  fileExists: boolean;
-  cookieCount: number;
-  lastModified?: number;
+  readonly filePath: string;
+  readonly fileExists: boolean;
+  readonly cookieCount: number;
+  readonly lastModified?: number;
 }
 
+/**
+ * Authentication login result
+ */
 export interface LoginResult {
-  success: boolean;
-  message: string;
-  status: 'logged_in' | 'logged_out';
-  action: 'none' | 'logged_in' | 'logged_out' | 'failed';
-  profile?: UserProfile;
+  readonly success: boolean;
+  readonly message: string;
+  readonly status: 'logged_in' | 'logged_out';
+  readonly action: 'none' | 'logged_in' | 'logged_out' | 'failed';
+  readonly profile?: UserProfile;
 }
 
+/**
+ * User profile information
+ */
 export interface UserProfile {
-  userId?: string;
-  nickname?: string;
-  username?: string;
-  avatar?: string;
-  followers?: number;
-  following?: number;
-  likes?: number;
-  xhsNumber?: string; // 小红书号
-  ipLocation?: string; // IP属地
-  profileUrl?: string; // 用户资料页面URL
+  readonly userId?: string;
+  readonly nickname?: string;
+  readonly username?: string;
+  readonly avatar?: string;
+  readonly followers?: number;
+  readonly following?: number;
+  readonly likes?: number;
+  readonly xhsNumber?: string; // 小红书号
+  readonly ipLocation?: string; // IP属地
+  readonly profileUrl?: string; // 用户资料页面URL
 }
 
+/**
+ * Authentication status result
+ */
 export interface StatusResult {
-  success: boolean;
-  loggedIn?: boolean;
-  status: 'logged_in' | 'logged_out' | 'unknown';
-  method?: string;
-  cookiesAvailable?: boolean;
-  cookieCount?: number;
-  cookiesFile?: string;
-  likelyLoggedIn?: boolean;
-  urlChecked?: string;
-  profile?: UserProfile;
-  error?: string;
+  readonly success: boolean;
+  readonly loggedIn?: boolean;
+  readonly status: 'logged_in' | 'logged_out' | 'unknown';
+  readonly method?: string;
+  readonly cookiesAvailable?: boolean;
+  readonly cookieCount?: number;
+  readonly cookiesFile?: string;
+  readonly likelyLoggedIn?: boolean;
+  readonly urlChecked?: string;
+  readonly profile?: UserProfile;
+  readonly error?: string;
 }
 
+/**
+ * Individual feed item from XHS
+ */
 export interface FeedItem {
-  id: string;
-  type: string;
-  title: string;
-  desc: string;
-  images: string[];
-  user: {
-    id: string;
-    nickname: string;
-    avatar: string;
+  readonly id: string;
+  readonly type: string;
+  readonly title: string;
+  readonly desc: string;
+  readonly images: readonly string[];
+  readonly user: {
+    readonly id: string;
+    readonly nickname: string;
+    readonly avatar: string;
   };
-  interact_info: {
-    liked: boolean;
-    liked_count: string;
-    collected: boolean;
-    collected_count: string;
-    comment_count: string;
-    share_count: string;
+  readonly interact_info: {
+    readonly liked: boolean;
+    readonly liked_count: string;
+    readonly collected: boolean;
+    readonly collected_count: string;
+    readonly comment_count: string;
+    readonly share_count: string;
   };
-  time: number;
-  last_update_time: number;
+  readonly time: number;
+  readonly last_update_time: number;
 }
 
+/**
+ * Feed list operation result
+ */
 export interface FeedListResult {
-  success: boolean;
-  feeds: FeedItem[];
-  count: number;
-  source: string;
-  url: string;
+  readonly success: boolean;
+  readonly feeds: readonly FeedItem[];
+  readonly count: number;
+  readonly source: string;
+  readonly url: string;
 }
 
+/**
+ * Search operation result
+ */
 export interface SearchResult {
-  success: boolean;
-  keyword: string;
-  feeds: FeedItem[];
-  count: number;
-  searchUrl: string;
+  readonly success: boolean;
+  readonly keyword: string;
+  readonly feeds: readonly FeedItem[];
+  readonly count: number;
+  readonly searchUrl: string;
 }
 
+/**
+ * Feed detail operation result
+ */
 export interface FeedDetailResult {
-  success: boolean;
-  feedId: string;
-  detail: Record<string, unknown>;
-  url: string;
+  readonly success: boolean;
+  readonly feedId: string;
+  readonly detail: Record<string, unknown>;
+  readonly url: string;
 }
 
+/**
+ * Comment operation result
+ */
 export interface CommentResult {
-  success: boolean;
-  message: string;
-  feedId: string;
-  note: string;
-  url: string;
+  readonly success: boolean;
+  readonly message: string;
+  readonly feedId: string;
+  readonly note: string;
+  readonly url: string;
 }
 
+/**
+ * Publish operation result
+ */
 export interface PublishResult {
-  success: boolean;
-  message: string;
-  title: string;
-  content: string;
-  imageCount: number;
-  tags: string;
-  url: string;
+  readonly success: boolean;
+  readonly message: string;
+  readonly title: string;
+  readonly content: string;
+  readonly imageCount: number;
+  readonly tags: string;
+  readonly url: string;
 }
 
+/**
+ * Server status information
+ */
 export interface ServerStatus {
-  server: {
-    status: string;
-    name: string;
-    version: string;
-    framework: string;
+  readonly server: {
+    readonly status: string;
+    readonly name: string;
+    readonly version: string;
+    readonly framework: string;
   };
-  authentication: StatusResult;
-  cookies: {
-    fileExists: boolean;
-    cookieCount: number;
+  readonly authentication: StatusResult;
+  readonly cookies: {
+    readonly fileExists: boolean;
+    readonly cookieCount: number;
   };
-  capabilities: {
-    toolsAvailable: number;
-    promptsAvailable: number;
-    resourcesAvailable: number;
+  readonly capabilities: {
+    readonly toolsAvailable: number;
+    readonly promptsAvailable: number;
+    readonly resourcesAvailable: number;
   };
 }
 
+/**
+ * Error context information
+ */
 export interface XHSErrorContext {
-  operation?: string;
-  url?: string;
-  feedId?: string;
-  keyword?: string;
-  timeout?: number;
-  attempts?: number;
-  [key: string]: unknown;
+  readonly operation?: string;
+  readonly url?: string;
+  readonly feedId?: string;
+  readonly keyword?: string;
+  readonly timeout?: number;
+  readonly attempts?: number;
+  readonly [key: string]: unknown;
 }
 
 // Error classes moved to ./errors.ts

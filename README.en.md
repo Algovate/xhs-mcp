@@ -86,7 +86,11 @@ npx xhs-mcp browser  # check and install Chromium, shows executable path
 # Discover
 npx xhs-mcp feeds
 npx xhs-mcp search -k keyword
-npx xhs-mcp note-detail --feed-id <id> --xsec-token <token>
+
+# Current user's notes
+npx xhs-mcp usernote list [-l 20] [--cursor <cursor>]
+
+# Interact
 npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!"
 
 # Publish with local images

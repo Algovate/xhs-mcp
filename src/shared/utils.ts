@@ -46,6 +46,41 @@ export function validateRequiredParams(
 }
 
 /**
+ * Type guard to check if a value is a string
+ */
+export function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Type guard to check if a value is a number
+ */
+export function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && !Number.isNaN(value);
+}
+
+/**
+ * Type guard to check if a value is an array
+ */
+export function isArray<T>(value: unknown): value is T[] {
+  return Array.isArray(value);
+}
+
+/**
+ * Safely parse JSON string
+ * @param jsonString - JSON string to parse
+ * @param fallback - Fallback value if parsing fails
+ * @returns Parsed object or fallback value
+ */
+export function safeJsonParse<T>(jsonString: string, fallback: T): T {
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Validate publish note parameters with length constraints
  * @param title - Note title
  * @param note - Note content

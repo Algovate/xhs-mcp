@@ -109,7 +109,9 @@ npx xhs-mcp browser [--with-deps]  # 检查并安装 Chromium，显示可执行�
 # 发现与检索
 npx xhs-mcp feeds [-b /path/to/chromium]
 npx xhs-mcp search -k 关键字 [-b /path/to/chromium]
-npx xhs-mcp note-detail --feed-id <id> --xsec-token <token> [-b /path/to/chromium]
+
+# 当前用户笔记
+npx xhs-mcp usernote list [-l 20] [--cursor <cursor>] [-b /path/to/chromium]
 
 # 互动
 npx xhs-mcp comment --feed-id <id> --xsec-token <token> -n "Nice!" [-b /path/to/chromium]

@@ -27,11 +27,10 @@ export class XHSError extends Error {
       success: false,
       error: this.errorCode,
       message: this.message,
-      context: this.context,
+      context: this.originalError 
+        ? { ...this.context, originalError: this.originalError.message }
+        : this.context,
     };
-    if (this.originalError) {
-      result.context = { ...result.context, originalError: this.originalError.message };
-    }
     return result;
   }
 }

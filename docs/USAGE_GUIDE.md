@@ -114,10 +114,11 @@ npx xhs-mcp feeds
 npx xhs-mcp search -k "美食"
 ```
 
-### 获取笔记详情
+### 当前用户笔记
 
 ```bash
-npx xhs-mcp note-detail --feed-id <feed_id> --xsec-token <token>
+# 列出当前用户笔记
+npx xhs-mcp usernote list [-l 20] [--cursor <cursor>]
 ```
 
 ### 评论笔记
