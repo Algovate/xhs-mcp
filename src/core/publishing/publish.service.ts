@@ -211,7 +211,7 @@ export class PublishService extends BaseService {
         // Check if tab switch was successful and retry if needed
         const pageState = await page.evaluate(() => {
           return {
-            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]')).map(el => el.textContent?.trim()).filter(t => t)
+            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]')).map((el: any) => el.textContent?.trim()).filter((t: any) => t)
           };
         });
 

@@ -52,7 +52,7 @@ export class FeedService extends BaseService {
               }
               return null;
             })()
-          `);
+          `) as string | null;
           
           if (feedData) {
             logger.info(`Feed results loaded after ${attempts} attempts`);
@@ -125,7 +125,7 @@ export class FeedService extends BaseService {
               }
               return null;
             })()
-          `);
+          `) as string | null;
 
           if (searchData) {
             logger.info(`Search results loaded after ${attempts} attempts`);
