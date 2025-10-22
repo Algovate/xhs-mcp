@@ -51,7 +51,22 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
 
         for (const state of possibleStates) {
           if (state && typeof state === 'object') {
-            return JSON.stringify(state);
+            try {
+              // Use a more robust JSON serialization that handles circular references
+              const seen = new WeakSet();
+              return JSON.stringify(state, (key, val) => {
+                if (val != null && typeof val === "object") {
+                  if (seen.has(val)) {
+                    return "[Circular]";
+                  }
+                  seen.add(val);
+                }
+                return val;
+              });
+            } catch (e) {
+              console.log('JSON.stringify failed for state:', e.message);
+              continue;
+            }
           }
         }
 
@@ -63,7 +78,21 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
         for (const key of globalKeys) {
           const value = window[key];
           if (value && typeof value === 'object') {
-            return JSON.stringify(value);
+            try {
+              const seen = new WeakSet();
+              return JSON.stringify(value, (key, val) => {
+                if (val != null && typeof val === "object") {
+                  if (seen.has(val)) {
+                    return "[Circular]";
+                  }
+                  seen.add(val);
+                }
+                return val;
+              });
+            } catch (e) {
+              console.log('JSON.stringify failed for global key:', key, e.message);
+              continue;
+            }
           }
         }
 

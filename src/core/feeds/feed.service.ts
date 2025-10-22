@@ -29,35 +29,45 @@ export class FeedService extends BaseService {
           });
         }
 
-        // Extract initial state
-        const state = await extractInitialState(page);
-
-        if (!state) {
-          throw new FeedParsingError('Could not extract any initial state from page. The page may not be fully loaded or the state structure has changed.', {
-            url: this.getConfig().xhs.homeUrl,
-            suggestion: 'Try logging in first using xhs_auth_login tool',
-          });
+        // Extract feed data using a more targeted approach
+        let feedData: string | null = null;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (attempts < maxAttempts && !feedData) {
+          await sleep(2000); // Wait 2 seconds between attempts
+          attempts++;
+          
+          feedData = await page.evaluate(`
+            (() => {
+              if (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.feed && window.__INITIAL_STATE__.feed.feeds && window.__INITIAL_STATE__.feed.feeds._value) {
+                try {
+                  // Try to serialize just the feeds data to avoid circular reference issues
+                  const feedsData = window.__INITIAL_STATE__.feed.feeds._value;
+                  return JSON.stringify(feedsData);
+                } catch (e) {
+                  console.log('Failed to serialize feeds data:', e.message);
+                  return null;
+                }
+              }
+              return null;
+            })()
+          `);
+          
+          if (feedData) {
+            logger.info(`Feed results loaded after ${attempts} attempts`);
+            break;
+          }
         }
 
-        const feedData = state.feed as Record<string, unknown>;
         if (!feedData) {
-          throw new FeedParsingError('Could not find feed data in page state. You may need to log in first.', {
+          throw new FeedParsingError(`Could not extract feed data after ${maxAttempts} attempts. The page may not be fully loaded or the state structure has changed.`, {
             url: this.getConfig().xhs.homeUrl,
-            availableKeys: Object.keys(state),
             suggestion: 'Try logging in first using xhs_auth_login tool',
           });
         }
 
-        const feedsData = feedData.feeds as Record<string, unknown>;
-        if (!feedsData) {
-          throw new FeedParsingError('Could not find feeds array in feed state.', {
-            url: this.getConfig().xhs.homeUrl,
-            feedKeys: Object.keys(feedData),
-            suggestion: 'Try logging in first using xhs_auth_login tool',
-          });
-        }
-
-        const feedsValue = (feedsData._value as unknown[]) || [];
+        const feedsValue = JSON.parse(feedData) as unknown[];
 
         return {
           success: true,
@@ -91,20 +101,46 @@ export class FeedService extends BaseService {
       try {
         const searchUrl = makeSearchUrl(trimmedKeyword);
         await this.getBrowserManager().navigateWithRetry(page, searchUrl);
-        await sleep(1000);
 
-        // Extract search results
-        const state = await extractInitialState(page);
+        // Wait for search results to load with multiple attempts
+        let searchData: string | null = null;
+        let attempts = 0;
+        const maxAttempts = 10;
 
-        const searchData = state?.search as Record<string, unknown>;
-        if (!state || !searchData || !searchData.feeds) {
-          throw new FeedParsingError(`Could not extract search results for keyword: ${trimmedKeyword}`, {
+        while (attempts < maxAttempts && !searchData) {
+          await sleep(2000); // Wait 2 seconds between attempts
+          attempts++;
+
+          searchData = await page.evaluate(`
+            (() => {
+              if (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.search && window.__INITIAL_STATE__.search.feeds && window.__INITIAL_STATE__.search.feeds._value) {
+                try {
+                  // Try to serialize just the feeds data to avoid circular reference issues
+                  const feedsData = window.__INITIAL_STATE__.search.feeds._value;
+                  return JSON.stringify(feedsData);
+                } catch (e) {
+                  console.log('Failed to serialize feeds data:', e.message);
+                  return null;
+                }
+              }
+              return null;
+            })()
+          `);
+
+          if (searchData) {
+            logger.info(`Search results loaded after ${attempts} attempts`);
+            break;
+          }
+        }
+
+        if (!searchData) {
+          throw new FeedParsingError(`Could not extract search results for keyword: ${trimmedKeyword} after ${maxAttempts} attempts`, {
             keyword: trimmedKeyword,
             url: searchUrl,
           });
         }
 
-        const feedsValue = ((searchData.feeds as Record<string, unknown>)._value as unknown[]) || [];
+        const feedsValue = JSON.parse(searchData) as unknown[];
 
         return {
           success: true,
