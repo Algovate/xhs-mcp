@@ -23,6 +23,8 @@ export interface UserNote {
   readonly collectCount: number;
   readonly tags: readonly string[];
   readonly url: string;
+  readonly visibility: 'public' | 'private' | 'friends' | 'unknown';
+  readonly visibilityText?: string;
 }
 
 export interface UserNotesResult extends XHSResponse<UserNote[]> {
@@ -45,19 +47,25 @@ export interface NoteExtractionData {
   collectCount: number;
   tags: string[];
   url: string;
+  visibility: 'public' | 'private' | 'friends' | 'unknown';
+  visibilityText?: string;
 }
 
 /**
  * Constants for note extraction
  */
 const NOTE_SELECTORS = {
+  // Creator center specific selectors
   PROFILE_LINK: 'a[href*="/user/profile/"]',
-  NOTE_ELEMENTS: '[class*="note"], [class*="feed"], [class*="post"]',
-  TITLE_ELEMENTS: '[class*="title"], [class*="content"], h1, h2, h3',
-  IMAGE_ELEMENTS: 'img',
-  STAT_ELEMENTS: '[class*="count"], [class*="stat"]',
+  NOTE_ELEMENTS: 'div.note',
+  TITLE_ELEMENTS: '[class*="raw"], [class*="title"], [class*="name"]',
+  IMAGE_ELEMENTS: 'img[class*="media"], img[class*="cover"], img[class*="thumbnail"]',
+  STAT_ELEMENTS: '[class*="count"], [class*="stat"], [class*="number"]',
   TAG_ELEMENTS: '[class*="tag"], [class*="label"]',
-  NOTE_LINK: 'a[href*="/explore/"]'
+  NOTE_LINK: 'a[href*="/explore/"], a[href*="/note/"]',
+  VISIBILITY_INDICATORS: '[class*="private"], [class*="visibility"], [class*="lock"], [class*="eye"], [class*="public"], [class*="friends"], [class*="status"]',
+  PUBLISH_TIME: '[class*="time"], [class*="date"], [class*="publish-time"]',
+  NOTE_ACTIONS: '[class*="action"], [class*="menu"], [class*="button"]'
 } as const;
 
 const PROFILE_INDICATORS = ['我', 'profile', '用户'] as const;
@@ -68,7 +76,7 @@ export class NoteService extends BaseService {
   }
 
   /**
-   * Get current user's published notes
+   * Get current user's published notes from creator center
    * @param limit - Maximum number of notes to return (default: 20)
    * @param cursor - Pagination cursor for next page
    * @param browserPath - Optional custom browser path
@@ -81,19 +89,15 @@ export class NoteService extends BaseService {
   ): Promise<UserNotesResult> {
     this.validateGetUserNotesParams(limit);
 
-    const page = await this.getBrowserManager().createPage(true, browserPath, true);
+      const page = await this.getBrowserManager().createPage(true, browserPath, true);
 
-    try {
-      // Navigate to explore page and check authentication
-      await this.navigateToExplorePage(page);
+      try {
+      // Navigate to creator center note manager
+      await this.navigateToCreatorCenter(page);
       await this.verifyUserAuthentication(page);
 
-      // Find and navigate to user profile
-      const profileUrl = await this.findUserProfileUrl(page);
-      await this.navigateToProfilePage(page, profileUrl);
-
-      // Extract notes from profile page
-      const notesData = await this.extractNotesFromPage(page);
+      // Extract notes from creator center
+      const notesData = await this.extractNotesFromCreatorCenter(page);
       const limitedNotes = this.limitNotes(notesData, limit);
 
       return {
@@ -135,15 +139,16 @@ export class NoteService extends BaseService {
   }
 
   /**
-   * Navigate to explore page
+   * Navigate to creator center note manager
    */
-  private async navigateToExplorePage(page: any): Promise<void> {
+  private async navigateToCreatorCenter(page: any): Promise<void> {
     try {
-      await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.exploreUrl);
-      await sleep(1000);
+      const creatorCenterUrl = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
+      await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
+      await sleep(3000); // Wait for page to load completely
     } catch (error) {
-      throw new NoteParsingError('Failed to navigate to explore page', 
-        { url: this.getConfig().xhs.exploreUrl }, 
+      throw new NoteParsingError('Failed to navigate to creator center', 
+        { url: 'https://creator.xiaohongshu.com/new/note-manager?source=official' }, 
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -154,12 +159,30 @@ export class NoteService extends BaseService {
    */
   private async verifyUserAuthentication(page: any): Promise<void> {
     try {
-      const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
-      if (loginElements.length === 0) {
-        throw new NotLoggedInError('User not logged in', { 
-          operation: 'getUserNotes',
-          url: this.getConfig().xhs.exploreUrl 
-        });
+      // Check for login elements on the current page
+        const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
+      
+      // Also check for creator center specific elements
+      const creatorElements = await page.$$('[class*="user"], [class*="profile"], [class*="avatar"]');
+      
+      if (loginElements.length === 0 && creatorElements.length === 0) {
+        // Check if we're on a login page
+        const currentUrl = page.url();
+        if (currentUrl.includes('login') || currentUrl.includes('signin')) {
+          throw new NotLoggedInError('User not logged in', { 
+            operation: 'getUserNotes',
+            url: currentUrl 
+          });
+        }
+        
+        // For creator center, check if we can see note management elements
+        const noteElements = await page.$$('div.note');
+        if (noteElements.length === 0) {
+          throw new NotLoggedInError('User not logged in or no notes found', { 
+            operation: 'getUserNotes',
+            url: currentUrl 
+          });
+        }
       }
     } catch (error) {
       if (error instanceof NotLoggedInError) {
@@ -180,12 +203,12 @@ export class NoteService extends BaseService {
       const profileUrl = await (page as any).evaluate((selectors: typeof NOTE_SELECTORS, indicators: readonly string[]) => {
         const userLinks = Array.from((globalThis as any).document.querySelectorAll(selectors.PROFILE_LINK));
         const currentUserLink = userLinks.find((link: any) => {
-          const text = link.textContent?.trim();
+            const text = link.textContent?.trim();
           return text && indicators.some(indicator => 
             text === indicator || text.includes(indicator)
           );
-        });
-        return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
+          });
+          return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
       }, NOTE_SELECTORS, PROFILE_INDICATORS);
 
       if (!profileUrl) {
@@ -212,8 +235,8 @@ export class NoteService extends BaseService {
    */
   private async navigateToProfilePage(page: any, profileUrl: string): Promise<void> {
     try {
-      await this.getBrowserManager().navigateWithRetry(page, profileUrl);
-      await sleep(2000); // Wait for profile page to load
+        await this.getBrowserManager().navigateWithRetry(page, profileUrl);
+        await sleep(2000); // Wait for profile page to load
     } catch (error) {
       throw new ProfileError('Failed to navigate to profile page', 
         { operation: 'navigateToProfile', profileUrl }, 
@@ -228,8 +251,8 @@ export class NoteService extends BaseService {
   private async extractNotesFromPage(page: any): Promise<NoteExtractionData[]> {
     try {
       const notesData = await (page as any).evaluate((selectors: typeof NOTE_SELECTORS) => {
-        const notes: any[] = [];
-        
+          const notes: any[] = [];
+
         // Try multiple selectors to find note elements
         const possibleSelectors = [
           selectors.NOTE_ELEMENTS,
@@ -258,20 +281,20 @@ export class NoteService extends BaseService {
           try {
             // Extract note data from element
             const publishTime = Date.now();
-            const note: any = {
-              id: '',
-              title: '',
-              content: '',
-              images: [],
+              const note: any = {
+                id: '',
+                title: '',
+                content: '',
+                images: [],
               publishTime,
               updateTime: publishTime,
-              likeCount: 0,
-              commentCount: 0,
-              shareCount: 0,
-              collectCount: 0,
-              tags: [],
-              url: ''
-            };
+                likeCount: 0,
+                commentCount: 0,
+                shareCount: 0,
+                collectCount: 0,
+                tags: [],
+                url: ''
+              };
 
             // Extract note ID and URL - try multiple selectors
             const linkSelectors = [
@@ -292,10 +315,121 @@ export class NoteService extends BaseService {
             
             if (linkElement) {
               const href = linkElement.href;
-              const idMatch = href.match(/\/explore\/([a-f0-9]+)/);
-              if (idMatch) {
-                note.id = idMatch[1];
-                note.url = href;
+                const idMatch = href.match(/\/explore\/([a-f0-9]+)/);
+                if (idMatch) {
+                  note.id = idMatch[1];
+                  note.url = href;
+                }
+              }
+
+              // Extract title/content
+            const titleElement = element.querySelector(selectors.TITLE_ELEMENTS);
+              if (titleElement) {
+              const title = titleElement.textContent?.trim() ?? '';
+              note.title = title;
+              note.content = title;
+              }
+
+              // Extract images
+            const imageElements = element.querySelectorAll(selectors.IMAGE_ELEMENTS);
+            imageElements.forEach((img: any) => {
+              const src = img.src;
+              if (src && !src.includes('avatar') && !src.includes('icon')) {
+                note.images.push(src);
+              }
+            });
+
+            // Extract stats
+            const statElements = element.querySelectorAll(selectors.STAT_ELEMENTS);
+            statElements.forEach((stat: any) => {
+              const text = stat.textContent?.trim() ?? '';
+                const number = parseInt(text.replace(/[^\d]/g, '')) || 0;
+
+                if (text.includes('赞') || text.includes('like')) {
+                  note.likeCount = number;
+                } else if (text.includes('评论') || text.includes('comment')) {
+                  note.commentCount = number;
+                } else if (text.includes('分享') || text.includes('share')) {
+                  note.shareCount = number;
+                } else if (text.includes('收藏') || text.includes('collect')) {
+                  note.collectCount = number;
+                }
+              });
+
+              // Extract tags
+            const tagElements = element.querySelectorAll(selectors.TAG_ELEMENTS);
+            tagElements.forEach((tag: any) => {
+                const tagText = tag.textContent?.trim();
+              if (tagText?.startsWith('#')) {
+                  note.tags.push(tagText);
+                }
+              });
+
+              if (note.id) {
+                notes.push(note);
+              }
+            } catch (error) {
+              console.error('Error extracting note:', error);
+            }
+          });
+
+          return notes;
+      }, NOTE_SELECTORS);
+
+      return notesData;
+    } catch (error) {
+      throw new NoteParsingError('Failed to extract notes from page', 
+        { operation: 'extractNotes' }, 
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
+  /**
+   * Extract notes from creator center page
+   */
+  private async extractNotesFromCreatorCenter(page: any): Promise<NoteExtractionData[]> {
+    try {
+      const notesData = await (page as any).evaluate((selectors: typeof NOTE_SELECTORS) => {
+        const notes: any[] = [];
+        
+        // Find note elements using the creator center selector
+        const noteElements = Array.from(document.querySelectorAll(selectors.NOTE_ELEMENTS));
+        console.log('Found note elements:', noteElements.length);
+
+        noteElements.forEach((element: any) => {
+          try {
+            // Extract note data from element
+            const publishTime = Date.now();
+            const note: any = {
+              id: '',
+              title: '',
+              content: '',
+              images: [],
+              publishTime,
+              updateTime: publishTime,
+              likeCount: 0,
+              commentCount: 0,
+              shareCount: 0,
+              collectCount: 0,
+              tags: [],
+              url: '',
+              visibility: 'unknown',
+              visibilityText: ''
+            };
+
+            // Extract note ID from data attributes or impression data
+            const impressionData = element.getAttribute('data-impression');
+            if (impressionData) {
+              try {
+                const parsed = JSON.parse(impressionData);
+                const noteId = parsed?.noteTarget?.value?.noteId;
+                if (noteId) {
+                  note.id = noteId;
+                  note.url = `https://www.xiaohongshu.com/explore/${noteId}`;
+                }
+              } catch (e) {
+                console.log('Failed to parse impression data:', e);
               }
             }
 
@@ -316,22 +450,57 @@ export class NoteService extends BaseService {
               }
             });
 
-            // Extract stats
-            const statElements = element.querySelectorAll(selectors.STAT_ELEMENTS);
-            statElements.forEach((stat: any) => {
-              const text = stat.textContent?.trim() ?? '';
-              const number = parseInt(text.replace(/[^\d]/g, '')) || 0;
+            // Extract stats - look for numbers in the element
+            const allText = element.textContent || '';
+            const numbers = allText.match(/\d+/g) || [];
+            
+            // Try to extract stats from text content
+            if (numbers.length >= 4) {
+              // Assuming order: like, comment, share, collect, view
+              note.likeCount = parseInt(numbers[0]) || 0;
+              note.commentCount = parseInt(numbers[1]) || 0;
+              note.shareCount = parseInt(numbers[2]) || 0;
+              note.collectCount = parseInt(numbers[3]) || 0;
+            }
 
-              if (text.includes('赞') || text.includes('like')) {
-                note.likeCount = number;
-              } else if (text.includes('评论') || text.includes('comment')) {
-                note.commentCount = number;
-              } else if (text.includes('分享') || text.includes('share')) {
-                note.shareCount = number;
-              } else if (text.includes('收藏') || text.includes('collect')) {
-                note.collectCount = number;
+            // Extract publish time
+            const timeElement = element.querySelector(selectors.PUBLISH_TIME);
+            if (timeElement) {
+              const timeText = timeElement.textContent?.trim() || '';
+              if (timeText.includes('发布于')) {
+                // Parse Chinese date format
+                const dateMatch = timeText.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})/);
+                if (dateMatch) {
+                  const [, year, month, day, hour, minute] = dateMatch;
+                  const publishDate = new Date(
+                    parseInt(year), 
+                    parseInt(month) - 1, 
+                    parseInt(day), 
+                    parseInt(hour), 
+                    parseInt(minute)
+                  );
+                  note.publishTime = publishDate.getTime();
+                  note.updateTime = publishDate.getTime();
+                }
               }
-            });
+            }
+
+            // Extract visibility information
+            const elementText = element.textContent?.toLowerCase() || '';
+            if (elementText.includes('仅自己可见')) {
+              note.visibility = 'private';
+              note.visibilityText = '仅自己可见';
+            } else if (elementText.includes('朋友可见')) {
+              note.visibility = 'friends';
+              note.visibilityText = '朋友可见';
+            } else if (elementText.includes('公开')) {
+              note.visibility = 'public';
+              note.visibilityText = '公开';
+            } else {
+              // Default to public for notes without explicit visibility indicators
+              note.visibility = 'public';
+              note.visibilityText = '公开';
+            }
 
             // Extract tags
             const tagElements = element.querySelectorAll(selectors.TAG_ELEMENTS);
@@ -355,8 +524,8 @@ export class NoteService extends BaseService {
 
       return notesData;
     } catch (error) {
-      throw new NoteParsingError('Failed to extract notes from page', 
-        { operation: 'extractNotes' }, 
+      throw new NoteParsingError('Failed to extract notes from creator center', 
+        { operation: 'extractNotesFromCreatorCenter' }, 
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -500,7 +669,9 @@ export class NoteService extends BaseService {
       shareCount: 0,
       collectCount: 0,
       tags: [],
-      url: ''
+      url: '',
+      visibility: 'unknown',
+      visibilityText: ''
     };
 
     // Extract note ID and URL
@@ -525,7 +696,7 @@ export class NoteService extends BaseService {
     // Extract images
     const imageElements = element.querySelectorAll(selectors.IMAGE_ELEMENTS);
     imageElements.forEach(img => {
-      const src = img.src;
+      const src = (img as HTMLImageElement).src;
       if (src && !src.includes('avatar') && !src.includes('icon')) {
         note.images.push(src);
       }
@@ -590,7 +761,9 @@ export class NoteService extends BaseService {
       shareCount: note.shareCount,
       collectCount: note.collectCount,
       tags: Object.freeze([...note.tags]),
-      url: note.url
+      url: note.url,
+      visibility: note.visibility,
+      visibilityText: note.visibilityText
     }));
   }
 
