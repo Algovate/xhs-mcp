@@ -9,6 +9,7 @@ import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { ProfileError, NoteParsingError, NotLoggedInError } from '../../shared/errors';
 import { DeleteService, DeleteResult } from '../deleting/delete.service';
+import { Page } from 'puppeteer';
 
 export interface UserNote {
   readonly id: string;
@@ -34,21 +35,21 @@ export interface UserNotesResult extends XHSResponse<UserNote[]> {
   readonly nextCursor?: string;
 }
 
-export interface NoteExtractionData {
-  readonly id: string;
-  readonly title: string;
-  readonly content: string;
-  readonly images: readonly string[];
-  readonly publishTime: number;
-  readonly updateTime: number;
-  readonly likeCount: number;
-  readonly commentCount: number;
-  readonly shareCount: number;
-  readonly collectCount: number;
-  readonly tags: readonly string[];
-  readonly url: string;
-  readonly visibility: 'public' | 'private' | 'friends' | 'unknown';
-  readonly visibilityText?: string;
+interface NoteExtractionData {
+  id: string;
+  title: string;
+  content: string;
+  images: string[];
+  publishTime: number;
+  updateTime: number;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  collectCount: number;
+  tags: string[];
+  url: string;
+  visibility: 'public' | 'private' | 'friends' | 'unknown';
+  visibilityText: string;
 }
 
 /**
@@ -137,7 +138,7 @@ export class NoteService extends BaseService {
   /**
    * Navigate to creator center note manager
    */
-  private async navigateToCreatorCenter(page: any): Promise<void> {
+  private async navigateToCreatorCenter(page: Page): Promise<void> {
     try {
       const creatorCenterUrl = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
       await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
@@ -154,7 +155,7 @@ export class NoteService extends BaseService {
   /**
    * Verify user is authenticated
    */
-  private async verifyUserAuthentication(page: any): Promise<void> {
+  private async verifyUserAuthentication(page: Page): Promise<void> {
     try {
       // Check for login elements on the current page
       const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
@@ -198,20 +199,19 @@ export class NoteService extends BaseService {
   /**
    * Extract notes from creator center page
    */
-  private async extractNotesFromCreatorCenter(page: any): Promise<NoteExtractionData[]> {
+  private async extractNotesFromCreatorCenter(page: Page): Promise<NoteExtractionData[]> {
     try {
-      const notesData = await (page as any).evaluate((selectors: typeof NOTE_SELECTORS) => {
-        const notes: any[] = [];
+      const notesData = await page.evaluate((selectors: typeof NOTE_SELECTORS) => {
+        const notes: NoteExtractionData[] = [];
 
         // Find note elements using the creator center selector
         const noteElements = Array.from(document.querySelectorAll(selectors.NOTE_ELEMENTS));
-        console.log('Found note elements:', noteElements.length);
 
-        noteElements.forEach((element: any) => {
+        noteElements.forEach((element: Element) => {
           try {
             // Extract note data from element
             const publishTime = Date.now();
-            const note: any = {
+            const note: NoteExtractionData = {
               id: '',
               title: '',
               content: '',
@@ -239,7 +239,7 @@ export class NoteService extends BaseService {
                   note.url = `https://www.xiaohongshu.com/explore/${noteId}`;
                 }
               } catch (e) {
-                console.log('Failed to parse impression data:', e);
+                // Ignore parsing errors
               }
             }
 
@@ -270,29 +270,29 @@ export class NoteService extends BaseService {
               const elements = element.querySelectorAll(selector);
               if (elements.length > 0) {
                 imageElements = Array.from(elements);
-                console.log(`Found ${elements.length} images with selector: ${selector}`);
                 break;
               }
             }
 
-            imageElements.forEach((img: any) => {
+            imageElements.forEach((img: Element) => {
               let src = '';
 
               // Try different ways to get image source
-              if (img.src) {
-                src = img.src;
-              } else if (img.style && img.style.backgroundImage) {
+              const htmlImg = img as HTMLImageElement;
+              if (htmlImg.src) {
+                src = htmlImg.src;
+              } else if (htmlImg.style && htmlImg.style.backgroundImage) {
                 // Extract from background-image CSS
-                const bgMatch = img.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                const bgMatch = htmlImg.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
                 if (bgMatch) {
                   src = bgMatch[1];
                 }
               } else if (img.getAttribute('data-src')) {
                 // Lazy loaded images
-                src = img.getAttribute('data-src');
+                src = img.getAttribute('data-src') || '';
               } else if (img.getAttribute('data-original')) {
                 // Another lazy loading attribute
-                src = img.getAttribute('data-original');
+                src = img.getAttribute('data-original') || '';
               }
 
               if (
@@ -304,11 +304,9 @@ export class NoteService extends BaseService {
                 src.startsWith('http')
               ) {
                 note.images.push(src);
-                console.log('Added image:', src);
               }
             });
 
-            console.log(`Note ${note.id} has ${note.images.length} images`);
 
             // Extract stats - look for numbers in the element
             const allText = element.textContent || '';
@@ -317,7 +315,7 @@ export class NoteService extends BaseService {
             // Try to extract stats from text content
             if (numbers.length >= 4) {
               // Assuming order: like, comment, share, collect, view
-              note.likeCount = parseInt(numbers[0]) || 0;
+              note.likeCount = parseInt(numbers[0] || '0') || 0;
               note.commentCount = parseInt(numbers[1]) || 0;
               note.shareCount = parseInt(numbers[2]) || 0;
               note.collectCount = parseInt(numbers[3]) || 0;
@@ -366,7 +364,7 @@ export class NoteService extends BaseService {
 
             // Extract tags
             const tagElements = element.querySelectorAll(selectors.TAG_ELEMENTS);
-            tagElements.forEach((tag: any) => {
+            tagElements.forEach((tag: Element) => {
               const tagText = tag.textContent?.trim();
               if (tagText?.startsWith('#')) {
                 note.tags.push(tagText);
@@ -377,7 +375,7 @@ export class NoteService extends BaseService {
               notes.push(note);
             }
           } catch (error) {
-            console.error('Error extracting note:', error);
+            // Ignore extraction errors for individual notes
           }
         });
 

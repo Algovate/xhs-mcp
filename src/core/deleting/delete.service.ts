@@ -8,6 +8,8 @@ import { BaseService } from '../../shared/base.service';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { DeleteError, NotLoggedInError } from '../../shared/errors';
+import { Page } from 'puppeteer';
+import { COMMON_BUTTON_SELECTORS, COMMON_MODAL_SELECTORS } from '../../shared/selectors';
 
 export interface DeleteResult extends XHSResponse<null> {
   readonly noteId?: string;
@@ -27,7 +29,7 @@ export interface DeleteOptions {
 const DELETE_SELECTORS = {
   NOTE_ITEM: [
     'div.note',
-    '.note-item', 
+    '.note-item',
     '[class*="note"]',
     '[data-impression]',
     '.creator-note-item',
@@ -37,78 +39,14 @@ const DELETE_SELECTORS = {
   DELETE_BUTTON: [
     '.control.data-del',
     'span.control.data-del',
-    'button[class*="delete"]',
-    '.delete-btn',
-    '[class*="remove"]',
-    '.remove-btn',
-    'button[title*="删除"]',
-    'button[title*="delete"]',
-    '[aria-label*="删除"]',
-    '[aria-label*="delete"]',
-    'button:contains("删除")',
-    'button:contains("delete")'
+    ...COMMON_BUTTON_SELECTORS.DELETE
   ],
-  CONFIRM_BUTTON: [
-    '.confirm-btn',
-    'button.confirm-btn',
-    'button[class*="confirm"]',
-    '.ok-btn',
-    'button:contains("确认")',
-    'button:contains("确定")',
-    'button:contains("confirm")',
-    'button:contains("ok")',
-    '[aria-label*="确认"]',
-    '[aria-label*="确定"]'
-  ],
-  CANCEL_BUTTON: [
-    'button[class*="cancel"]',
-    '.cancel-btn',
-    'button:contains("取消")',
-    'button:contains("cancel")',
-    '[aria-label*="取消"]'
-  ],
-  MORE_OPTIONS: [
-    'button[class*="more"]',
-    '.more-btn',
-    '[class*="menu"]',
-    '.menu-btn',
-    'button[class*="action"]',
-    '.action-btn',
-    'button[class*="option"]',
-    '.option-btn',
-    'button[title*="更多"]',
-    'button[title*="more"]',
-    '[aria-label*="更多"]',
-    '[aria-label*="more"]',
-    'button:contains("⋯")',
-    'button:contains("...")',
-    '.three-dots',
-    '.ellipsis'
-  ],
-  DROPDOWN_MENU: [
-    '.dropdown-menu',
-    '.menu-list',
-    '[class*="dropdown"]',
-    '.context-menu',
-    '.action-menu',
-    '.options-menu',
-    '[role="menu"]',
-    '.popover-menu'
-  ],
-  MODAL_CONFIRM: [
-    '.modal button[class*="confirm"]',
-    '.dialog button[class*="confirm"]',
-    '[class*="modal"] button[class*="confirm"]',
-    '.ant-modal button[class*="confirm"]',
-    '.el-dialog button[class*="confirm"]'
-  ],
-  MODAL_CANCEL: [
-    '.modal button[class*="cancel"]',
-    '.dialog button[class*="cancel"]',
-    '[class*="modal"] button[class*="cancel"]',
-    '.ant-modal button[class*="cancel"]',
-    '.el-dialog button[class*="cancel"]'
-  ],
+  CONFIRM_BUTTON: COMMON_BUTTON_SELECTORS.CONFIRM,
+  CANCEL_BUTTON: COMMON_BUTTON_SELECTORS.CANCEL,
+  MORE_OPTIONS: COMMON_BUTTON_SELECTORS.MORE_OPTIONS,
+  DROPDOWN_MENU: COMMON_MODAL_SELECTORS.DROPDOWN_MENU,
+  MODAL_CONFIRM: COMMON_MODAL_SELECTORS.CONFIRM,
+  MODAL_CANCEL: COMMON_MODAL_SELECTORS.CANCEL,
 } as const;
 
 export class DeleteService extends BaseService {
@@ -211,18 +149,18 @@ export class DeleteService extends BaseService {
   /**
    * Navigate to creator center note manager
    */
-  private async navigateToCreatorCenter(page: any): Promise<void> {
+  private async navigateToCreatorCenter(page: Page): Promise<void> {
     try {
       const creatorCenterUrl = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
       await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
       await sleep(5000); // Wait longer for page to load completely
-      
+
       // Debug: Log page content to understand the structure
       const pageContent = await page.evaluate(() => {
         const noteElements = document.querySelectorAll('div.note, [class*="note"], [data-impression]');
         const allButtons = document.querySelectorAll('button, [role="button"], .btn, [class*="button"]');
         const allLinks = document.querySelectorAll('a[href*="/explore/"]');
-        
+
         return {
           totalNoteElements: noteElements.length,
           noteElementClasses: Array.from(noteElements).map(el => el.className),
@@ -234,7 +172,7 @@ export class DeleteService extends BaseService {
           currentUrl: window.location.href
         };
       });
-      
+
       logger.info(`Page loaded: ${JSON.stringify(pageContent, null, 2)}`);
     } catch (error) {
       throw new DeleteError(
@@ -248,7 +186,7 @@ export class DeleteService extends BaseService {
   /**
    * Verify user is authenticated
    */
-  private async verifyUserAuthentication(page: any): Promise<void> {
+  private async verifyUserAuthentication(page: Page): Promise<void> {
     try {
       // Check for login elements on the current page
       const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
@@ -292,39 +230,36 @@ export class DeleteService extends BaseService {
   /**
    * Find and delete a specific note by ID
    */
-  private async findAndDeleteNote(page: any, noteId: string): Promise<{ noteId: string; title: string }> {
+  private async findAndDeleteNote(page: Page, noteId: string): Promise<{ noteId: string; title: string }> {
     try {
       const result = await page.evaluate(
         (selectors: typeof DELETE_SELECTORS, targetNoteId: string) => {
-          console.log('Starting note search for ID:', targetNoteId);
-          
+
           // Try each note item selector
           let noteElements: Element[] = [];
           for (const selector of selectors.NOTE_ITEM) {
             const elements = Array.from(document.querySelectorAll(selector));
             if (elements.length > 0) {
               noteElements = elements;
-              console.log(`Found ${elements.length} note elements with selector: ${selector}`);
               break;
             }
           }
-          
+
           if (noteElements.length === 0) {
-            console.log('No note elements found with any selector');
             return { noteId: targetNoteId, title: '', found: false, error: 'No note elements found on page' };
           }
-          
+
           for (const noteElement of noteElements) {
             // Check if this is the note we want to delete
             const impressionData = noteElement.getAttribute('data-impression');
             let currentNoteId = '';
-            
+
             if (impressionData) {
               try {
                 const parsed = JSON.parse(impressionData);
                 currentNoteId = parsed?.noteTarget?.value?.noteId || '';
               } catch (e) {
-                console.log('Failed to parse impression data:', e);
+                // Ignore parsing errors
               }
             }
 
@@ -341,62 +276,42 @@ export class DeleteService extends BaseService {
             }
 
             if (currentNoteId === targetNoteId) {
-              console.log('Found matching note, looking for delete options');
-              
               // Found the target note, try to delete it
               const titleElement = noteElement.querySelector('[class*="title"], [class*="name"]');
               const title = titleElement?.textContent?.trim() || 'Unknown';
-              console.log('Note title:', title);
-              
-              // Debug: Log all buttons and interactive elements in this note
-              const allButtons = noteElement.querySelectorAll('button, [role="button"], .btn, [class*="button"], [class*="action"], [class*="menu"], [class*="more"]');
-              console.log('All buttons in note element:', Array.from(allButtons).map(btn => ({
-                tagName: btn.tagName,
-                className: btn.className,
-                textContent: btn.textContent?.trim(),
-                title: btn.getAttribute('title'),
-                'aria-label': btn.getAttribute('aria-label'),
-                onclick: btn.getAttribute('onclick')
-              })));
 
               // Look for delete button or more options button
               let deleteButton: Element | null = null;
-              
+
               // Try each delete button selector
               for (const selector of selectors.DELETE_BUTTON) {
                 deleteButton = noteElement.querySelector(selector);
                 if (deleteButton) {
-                  console.log('Found delete button with selector:', selector);
                   break;
                 }
               }
-              
+
               if (!deleteButton) {
-                console.log('No direct delete button found, looking for more options');
                 // Try to find more options button first
                 let moreButton: Element | null = null;
                 for (const selector of selectors.MORE_OPTIONS) {
                   moreButton = noteElement.querySelector(selector);
                   if (moreButton) {
-                    console.log('Found more options button with selector:', selector);
                     break;
                   }
                 }
-                
+
                 if (moreButton) {
-                  console.log('Clicking more options button');
                   (moreButton as HTMLElement).click();
-                  
+
                   // Wait for dropdown to appear and look for delete option
                   setTimeout(() => {
                     for (const selector of selectors.DROPDOWN_MENU) {
                       const dropdown = document.querySelector(selector);
                       if (dropdown) {
-                        console.log('Found dropdown menu with selector:', selector);
                         for (const deleteSelector of selectors.DELETE_BUTTON) {
                           deleteButton = dropdown.querySelector(deleteSelector);
                           if (deleteButton) {
-                            console.log('Found delete button in dropdown with selector:', deleteSelector);
                             break;
                           }
                         }
@@ -445,40 +360,37 @@ export class DeleteService extends BaseService {
   /**
    * Find and delete the last published note
    */
-  private async findAndDeleteLastNote(page: any): Promise<{ noteId: string; title: string }> {
+  private async findAndDeleteLastNote(page: Page): Promise<{ noteId: string; title: string }> {
     try {
       const result = await page.evaluate((selectors: typeof DELETE_SELECTORS) => {
-        console.log('Looking for last published note');
-        
+
         // Try each note item selector
         let noteElements: Element[] = [];
         for (const selector of selectors.NOTE_ITEM) {
           const elements = Array.from(document.querySelectorAll(selector));
           if (elements.length > 0) {
             noteElements = elements;
-            console.log(`Found ${elements.length} note elements with selector: ${selector}`);
             break;
           }
         }
-        
+
         if (noteElements.length === 0) {
-          console.log('No note elements found with any selector');
           return { noteId: '', title: '', found: false, error: 'No notes found' };
         }
 
         // Get the first note (most recent)
         const firstNote = noteElements[0];
-        
+
         // Extract note ID
         let noteId = '';
         const impressionData = firstNote.getAttribute('data-impression');
-        
+
         if (impressionData) {
           try {
             const parsed = JSON.parse(impressionData);
             noteId = parsed?.noteTarget?.value?.noteId || '';
           } catch (e) {
-            console.log('Failed to parse impression data:', e);
+            // Ignore parsing errors
           }
         }
 
@@ -500,42 +412,36 @@ export class DeleteService extends BaseService {
 
         // Look for delete button or more options button
         let deleteButton: Element | null = null;
-        
+
         // Try each delete button selector
         for (const selector of selectors.DELETE_BUTTON) {
           deleteButton = firstNote.querySelector(selector);
           if (deleteButton) {
-            console.log('Found delete button with selector:', selector);
             break;
           }
         }
-        
+
         if (!deleteButton) {
-          console.log('No direct delete button found, looking for more options');
           // Try to find more options button first
           let moreButton: Element | null = null;
           for (const selector of selectors.MORE_OPTIONS) {
             moreButton = firstNote.querySelector(selector);
             if (moreButton) {
-              console.log('Found more options button with selector:', selector);
               break;
             }
           }
-          
+
           if (moreButton) {
-            console.log('Clicking more options button');
             (moreButton as HTMLElement).click();
-            
+
             // Wait for dropdown to appear and look for delete option
             setTimeout(() => {
               for (const selector of selectors.DROPDOWN_MENU) {
                 const dropdown = document.querySelector(selector);
                 if (dropdown) {
-                  console.log('Found dropdown menu with selector:', selector);
                   for (const deleteSelector of selectors.DELETE_BUTTON) {
                     deleteButton = dropdown.querySelector(deleteSelector);
                     if (deleteButton) {
-                      console.log('Found delete button in dropdown with selector:', deleteSelector);
                       break;
                     }
                   }
@@ -577,14 +483,14 @@ export class DeleteService extends BaseService {
   /**
    * Handle confirmation dialog for delete operation
    */
-  private async handleConfirmationDialog(page: any): Promise<void> {
+  private async handleConfirmationDialog(page: Page): Promise<void> {
     try {
       // Wait for confirmation dialog to appear
       await sleep(2000);
 
       // Look for confirmation buttons using all possible selectors
       let confirmButton = null;
-      
+
       // Try each confirm button selector
       for (const selector of DELETE_SELECTORS.CONFIRM_BUTTON) {
         confirmButton = await page.$(selector);
@@ -593,7 +499,7 @@ export class DeleteService extends BaseService {
           break;
         }
       }
-      
+
       // If not found, try modal confirm selectors
       if (!confirmButton) {
         for (const selector of DELETE_SELECTORS.MODAL_CONFIRM) {
@@ -604,7 +510,7 @@ export class DeleteService extends BaseService {
           }
         }
       }
-      
+
       if (confirmButton) {
         logger.info('Clicking confirmation button');
         await confirmButton.click();

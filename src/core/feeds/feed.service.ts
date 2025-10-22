@@ -64,7 +64,7 @@ export class FeedService extends BaseService {
                   const feedsData = window.__INITIAL_STATE__.feed.feeds._value;
                   return JSON.stringify(feedsData);
                 } catch (e) {
-                  console.log('Failed to serialize feeds data:', e.message);
+                  logger.warn('Failed to serialize feeds data:', e.message);
                   return null;
                 }
               }
@@ -145,7 +145,7 @@ export class FeedService extends BaseService {
                   const feedsData = window.__INITIAL_STATE__.search.feeds._value;
                   return JSON.stringify(feedsData);
                 } catch (e) {
-                  console.log('Failed to serialize feeds data:', e.message);
+                  logger.warn('Failed to serialize feeds data:', e.message);
                   return null;
                 }
               }

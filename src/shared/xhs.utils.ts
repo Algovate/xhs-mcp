@@ -3,6 +3,7 @@
  */
 
 import { Page } from 'puppeteer';
+import { logger } from './logger';
 
 export const XHS_HOME_URL = 'https://www.xiaohongshu.com';
 export const XHS_EXPLORE_URL = `${XHS_HOME_URL}/explore`;
@@ -64,7 +65,7 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
                 return val;
               });
             } catch (e) {
-              console.log('JSON.stringify failed for state:', e.message);
+              logger.warn('JSON.stringify failed for state:', e.message);
               continue;
             }
           }
@@ -90,7 +91,7 @@ export async function extractInitialState(page: Page): Promise<Record<string, un
                 return val;
               });
             } catch (e) {
-              console.log('JSON.stringify failed for global key:', key, e.message);
+              logger.warn('JSON.stringify failed for global key:', key, e.message);
               continue;
             }
           }
@@ -206,7 +207,7 @@ export async function getLoginStatusWithProfile(page: Page): Promise<{
         return profile;
       });
     } catch {
-      console.error('❌ Error in page.evaluate');
+      logger.error('Error in page.evaluate');
       profileData = {};
     }
 

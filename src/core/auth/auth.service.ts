@@ -64,7 +64,7 @@ export class AuthService extends BaseService {
               profile = { ...profile, ...loginStatus.profile };
             }
           } catch (profileError) {
-            console.error('❌ Failed to get profile information:', profileError);
+            logger.warn('Failed to get profile information:', profileError);
             // Continue without profile info
           }
 
@@ -145,7 +145,7 @@ export class AuthService extends BaseService {
               }
             }
           } catch (profileError) {
-            console.error('❌ Failed to get additional profile information:', profileError);
+            logger.warn('Failed to get additional profile information:', profileError);
             // Continue with existing profile info
           }
 

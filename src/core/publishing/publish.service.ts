@@ -12,6 +12,7 @@ import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { ImageDownloader } from '../../shared/image-downloader';
 import { assertTitleWidthValid, getTitleWidth } from '../../shared/title-validator';
+import { COMMON_STATUS_SELECTORS, COMMON_TEXT_PATTERNS, COMMON_FILE_SELECTORS } from '../../shared/selectors';
 
 // Constants for video publishing
 const VIDEO_TIMEOUTS = {
@@ -28,42 +29,10 @@ const VIDEO_TIMEOUTS = {
 } as const;
 
 const SELECTORS = {
-  FILE_INPUT: [
-    'input[type=file]',
-    '.upload-input',
-    'input[accept*="video"]',
-    'input[accept*="mp4"]',
-    'input[class*="upload"]',
-    'input[class*="file"]',
-  ],
-  SUCCESS_INDICATORS: [
-    '.success-message',
-    '.publish-success',
-    '[data-testid="publish-success"]',
-    '.toast-success',
-    '.upload-success',
-    '.video-upload-success',
-    '.video-processing-complete',
-    '.upload-complete',
-  ],
-  ERROR_INDICATORS: [
-    '.error-message',
-    '.publish-error',
-    '[data-testid="publish-error"]',
-    '.toast-error',
-    '.error-toast',
-    '.upload-error',
-    '.video-upload-error',
-  ],
-  PROCESSING_INDICATORS: [
-    '.video-processing',
-    '.upload-progress',
-    '.processing-indicator',
-    '[class*="processing"]',
-    '[class*="uploading"]',
-    '.progress-bar',
-    '.upload-status',
-  ],
+  FILE_INPUT: COMMON_FILE_SELECTORS.FILE_INPUT,
+  SUCCESS_INDICATORS: COMMON_STATUS_SELECTORS.SUCCESS,
+  ERROR_INDICATORS: COMMON_STATUS_SELECTORS.ERROR,
+  PROCESSING_INDICATORS: COMMON_STATUS_SELECTORS.PROCESSING,
   COMPLETION_INDICATORS: [
     '.upload-complete',
     '.processing-complete',
@@ -71,14 +40,7 @@ const SELECTORS = {
     '[class*="complete"]',
     '[class*="ready"]',
   ],
-  TOAST_SELECTORS: [
-    '.toast',
-    '.message',
-    '.notification',
-    '[role="alert"]',
-    '.ant-message',
-    '.el-message',
-  ],
+  TOAST_SELECTORS: COMMON_STATUS_SELECTORS.TOAST,
   PUBLISH_PAGE_INDICATORS: [
     'div.upload-content',
     'div.submit',
@@ -88,11 +50,7 @@ const SELECTORS = {
   ],
 } as const;
 
-const TEXT_PATTERNS = {
-  SUCCESS: ['成功', 'success', '完成'],
-  ERROR: ['失败', 'error', '错误'],
-  PROCESSING: ['处理中', '上传中', 'processing', 'uploading', '进度'],
-} as const;
+const TEXT_PATTERNS = COMMON_TEXT_PATTERNS;
 
 export class PublishService extends BaseService {
   private imageDownloader: ImageDownloader;
@@ -117,9 +75,9 @@ export class PublishService extends BaseService {
     return null;
   }
 
-  private async getElementText(element: any): Promise<string | null> {
+  private async getElementText(element: Element): Promise<string | null> {
     try {
-      return await element.page().evaluate((el: any) => el.textContent, element);
+      return await (element as any).page().evaluate((el: Element) => el.textContent, element);
     } catch (error) {
       logger.warn(`Failed to get element text: ${error}`);
       return null;
@@ -142,7 +100,7 @@ export class PublishService extends BaseService {
     for (const selector of selectors) {
       const element = await page.$(selector);
       if (element) {
-        const text = await this.getElementText(element);
+        const text = await this.getElementText(element as unknown as Element);
         if (text && (await this.checkTextPatterns(text, patterns))) {
           return { found: true, text, element };
         }
@@ -221,8 +179,8 @@ export class PublishService extends BaseService {
         const pageState = await page.evaluate(() => {
           return {
             buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]'))
-              .map((el: any) => el.textContent?.trim())
-              .filter((t: any) => t),
+              .map((el: Element) => el.textContent?.trim())
+              .filter((t: string | undefined) => t),
           };
         });
 
@@ -490,11 +448,11 @@ export class PublishService extends BaseService {
 
   private async uploadImages(page: Page, imagePaths: string[]): Promise<void> {
     // Try primary file input selector
-    let fileInput = (await page.$('input[type=file]')) as any;
+    let fileInput = await page.$('input[type=file]') as any;
 
     if (!fileInput) {
       // Fallback to alternative selector
-      fileInput = (await page.$('.upload-input')) as any;
+      fileInput = await page.$('.upload-input') as any;
 
       if (!fileInput) {
         throw new PublishError('Could not find file upload input on page');
@@ -662,7 +620,7 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async findTextboxParent(page: Page, element: any): Promise<any | null> {
+  private async findTextboxParent(page: Page, element: Element): Promise<any> {
     try {
       return await page.evaluateHandle((el) => el.parentElement, element);
     } catch (error) {
@@ -781,13 +739,13 @@ export class PublishService extends BaseService {
     try {
       await contentElement.click();
       await sleep(500); // Wait for focus
-      await contentElement.type(content);
+      await (contentElement as any).type(content);
     } catch (error) {
       throw new PublishError(`Failed to fill content: ${error}`);
     }
   }
 
-  private async inputTags(contentElement: any, tags: string): Promise<void> {
+  private async inputTags(contentElement: Element, tags: string): Promise<void> {
     const tagList = tags
       .split(',')
       .map((tag) => tag.trim())
@@ -798,10 +756,10 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async inputTag(contentElement: any, tag: string): Promise<void> {
+  private async inputTag(contentElement: Element, tag: string): Promise<void> {
     try {
       // Get the page from the content element's context
-      const page = await contentElement.page();
+      const page = await (contentElement as any).page();
       
       // Try to find topic suggestion container
       const topicContainer = await page.$('#creator-editor-topic-container');
@@ -815,11 +773,11 @@ export class PublishService extends BaseService {
       }
 
       // Type the tag
-      await contentElement.type(`#${tag}`);
+      await (contentElement as any).type(`#${tag}`);
       await sleep(500);
 
       // Press Enter to confirm the tag
-      await contentElement.press('Enter');
+      await (contentElement as any).press('Enter');
       await sleep(500);
     } catch (error) {
       logger.warn(`Failed to add tag ${tag}: ${error}`);
@@ -856,9 +814,9 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async isElementVisible(element: any): Promise<boolean> {
+  private async isElementVisible(element: Element): Promise<boolean> {
     try {
-      return await element.isIntersectingViewport();
+      return await (element as any).isIntersectingViewport();
     } catch (error) {
       return false;
     }
