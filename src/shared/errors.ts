@@ -27,7 +27,7 @@ export class XHSError extends Error {
       success: false,
       error: this.errorCode,
       message: this.message,
-      context: this.originalError 
+      context: this.originalError
         ? { ...this.context, originalError: this.originalError.message }
         : this.context,
     };

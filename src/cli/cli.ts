@@ -205,12 +205,12 @@ async function main(): Promise<void> {
   // User Notes: unified command with subcommands
   const userNoteCommand = program
     .command('usernote')
-    .description('Current user\'s note management operations');
+    .description("Current user's note management operations");
 
   // User Note list subcommand
   userNoteCommand
     .command('list')
-    .description('List current user\'s published notes')
+    .description("List current user's published notes")
     .option('-l, --limit <number>', 'Maximum number of notes to retrieve', '20')
     .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
     .option('-b, --browser-path <path>', 'Custom browser binary path')
@@ -224,7 +224,6 @@ async function main(): Promise<void> {
         utils.printError(error);
       }
     });
-
 
   // Feeds: comment on note
   program
@@ -244,9 +243,9 @@ async function main(): Promise<void> {
             opts.note,
             opts.browserPath
           );
-        utils.printSuccess(result);
-      } catch (error) {
-        utils.printError(error);
+          utils.printSuccess(result);
+        } catch (error) {
+          utils.printError(error);
         }
       }
     );
@@ -292,9 +291,9 @@ async function main(): Promise<void> {
             opts.tags,
             opts.browserPath
           );
-        utils.printSuccess(result);
-      } catch (error) {
-        utils.printError(error);
+          utils.printSuccess(result);
+        } catch (error) {
+          utils.printError(error);
         }
       }
     );

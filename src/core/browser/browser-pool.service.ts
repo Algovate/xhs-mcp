@@ -59,7 +59,7 @@ export class BrowserPoolService {
       idleTimeout: options?.idleTimeout ?? 300000, // 5 minutes
       maxAge: options?.maxAge ?? 1800000, // 30 minutes
       healthCheckInterval: options?.healthCheckInterval ?? 60000, // 1 minute
-      maxUsageCount: options?.maxUsageCount ?? 100
+      maxUsageCount: options?.maxUsageCount ?? 100,
     };
 
     this.startHealthMonitoring();
@@ -157,25 +157,27 @@ export class BrowserPoolService {
    */
   getPoolStats(): BrowserPoolStats {
     const instances = Array.from(this.pool.values());
-    const availableInstances = instances.filter(b => b.isAvailable && b.isHealthy).length;
-    const busyInstances = instances.filter(b => !b.isAvailable).length;
-    const unhealthyInstances = instances.filter(b => !b.isHealthy).length;
+    const availableInstances = instances.filter((b) => b.isAvailable && b.isHealthy).length;
+    const busyInstances = instances.filter((b) => !b.isAvailable).length;
+    const unhealthyInstances = instances.filter((b) => !b.isHealthy).length;
     const totalUsage = instances.reduce((sum, b) => sum + b.usageCount, 0);
 
-    const ages = instances.map(b => Date.now() - b.createdAt.getTime());
+    const ages = instances.map((b) => Date.now() - b.createdAt.getTime());
     const averageAge = ages.length > 0 ? ages.reduce((sum, age) => sum + age, 0) / ages.length : 0;
 
-    const oldestInstance = instances.length > 0
-      ? instances.reduce((oldest, current) =>
-          current.createdAt < oldest.createdAt ? current : oldest
-        ).createdAt
-      : null;
+    const oldestInstance =
+      instances.length > 0
+        ? instances.reduce((oldest, current) =>
+            current.createdAt < oldest.createdAt ? current : oldest
+          ).createdAt
+        : null;
 
-    const newestInstance = instances.length > 0
-      ? instances.reduce((newest, current) =>
-          current.createdAt > newest.createdAt ? current : newest
-        ).createdAt
-      : null;
+    const newestInstance =
+      instances.length > 0
+        ? instances.reduce((newest, current) =>
+            current.createdAt > newest.createdAt ? current : newest
+          ).createdAt
+        : null;
 
     return {
       totalInstances: instances.length,
@@ -185,7 +187,7 @@ export class BrowserPoolService {
       totalUsage,
       averageAge,
       oldestInstance,
-      newestInstance
+      newestInstance,
     };
   }
 
@@ -240,8 +242,8 @@ export class BrowserPoolService {
           '--disable-gpu',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
-        ]
+          '--disable-renderer-backgrounding',
+        ],
       };
 
       const browser = await puppeteer.launch(launchOptions);
@@ -256,7 +258,7 @@ export class BrowserPoolService {
         lastUsed: new Date(),
         isAvailable: true,
         isHealthy: true,
-        usageCount: 0
+        usageCount: 0,
       };
 
       this.pool.set(id, managedBrowser);
@@ -370,8 +372,7 @@ export class BrowserPoolService {
       return;
     }
 
-    const healthyCount = Array.from(this.pool.values())
-      .filter(b => b.isHealthy).length;
+    const healthyCount = Array.from(this.pool.values()).filter((b) => b.isHealthy).length;
 
     const needed = this.options.minInstances - healthyCount;
 
@@ -379,7 +380,7 @@ export class BrowserPoolService {
       logger.info(`Creating ${needed} browser instances to maintain minimum pool size`);
 
       const createPromises = Array.from({ length: needed }, () =>
-        this.createBrowserInstance().catch(error => {
+        this.createBrowserInstance().catch((error) => {
           logger.error(`Failed to create browser for minimum instances: ${error}`);
           return null;
         })
@@ -393,8 +394,7 @@ export class BrowserPoolService {
    * Get count of available browsers
    */
   private getAvailableCount(): number {
-    return Array.from(this.pool.values())
-      .filter(b => b.isAvailable && b.isHealthy).length;
+    return Array.from(this.pool.values()).filter((b) => b.isAvailable && b.isHealthy).length;
   }
 
   /**
@@ -455,8 +455,7 @@ export class BrowserPoolService {
 
         if (idleTime > this.options.idleTimeout || shouldRetire) {
           // Only remove if we have more than minimum instances
-          const healthyCount = Array.from(this.pool.values())
-            .filter(b => b.isHealthy).length;
+          const healthyCount = Array.from(this.pool.values()).filter((b) => b.isHealthy).length;
 
           if (healthyCount > this.options.minInstances) {
             browsersToRemove.push(id);

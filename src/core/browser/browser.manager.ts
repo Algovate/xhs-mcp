@@ -123,8 +123,8 @@ export class BrowserManager {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
-        ]
+          '--disable-gpu',
+        ],
       };
 
       if (executablePath) {
@@ -153,7 +153,7 @@ export class BrowserManager {
       }
 
       // Convert our cookie format to Puppeteer format
-      const puppeteerCookies = cookies.map(cookie => ({
+      const puppeteerCookies = cookies.map((cookie) => ({
         name: cookie.name,
         value: cookie.value,
         domain: cookie.domain,
@@ -161,7 +161,7 @@ export class BrowserManager {
         expires: cookie.expires,
         httpOnly: cookie.httpOnly,
         secure: cookie.secure,
-        sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None' | undefined
+        sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None' | undefined,
       }));
 
       await page.setCookie(...puppeteerCookies);
@@ -177,7 +177,7 @@ export class BrowserManager {
       const cookies = await page.cookies();
 
       // Convert Puppeteer cookie format to our format
-      const ourCookies: Cookie[] = cookies.map(cookie => ({
+      const ourCookies: Cookie[] = cookies.map((cookie) => ({
         name: cookie.name,
         value: cookie.value,
         domain: cookie.domain,
@@ -185,7 +185,7 @@ export class BrowserManager {
         expires: cookie.expires,
         httpOnly: cookie.httpOnly,
         secure: cookie.secure,
-        sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None'
+        sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None',
       }));
 
       saveCookies(ourCookies);
@@ -207,7 +207,7 @@ export class BrowserManager {
       try {
         await page.goto(url, {
           waitUntil,
-          timeout: this.config.browser.navigationTimeout
+          timeout: this.config.browser.navigationTimeout,
         });
         return;
       } catch (error) {
@@ -237,7 +237,7 @@ export class BrowserManager {
     try {
       await page.waitForSelector(selector, {
         timeout: timeout || this.config.browser.defaultTimeout,
-        visible
+        visible,
       });
       return true;
     } catch (error) {
@@ -248,19 +248,11 @@ export class BrowserManager {
     }
   }
 
-  async waitForElementVisible(
-    page: Page,
-    selector: string,
-    timeout?: number
-  ): Promise<boolean> {
+  async waitForElementVisible(page: Page, selector: string, timeout?: number): Promise<boolean> {
     return this.waitForSelectorSafe(page, selector, timeout, true);
   }
 
-  async waitForElementHidden(
-    page: Page,
-    selector: string,
-    timeout?: number
-  ): Promise<boolean> {
+  async waitForElementHidden(page: Page, selector: string, timeout?: number): Promise<boolean> {
     return this.waitForSelectorSafe(page, selector, timeout, false);
   }
 

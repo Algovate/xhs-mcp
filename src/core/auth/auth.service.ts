@@ -3,7 +3,12 @@
  */
 
 import { Config, LoginResult, StatusResult } from '../../shared/types';
-import { LoginTimeoutError, LoginFailedError, NotLoggedInError, XHSError } from '../../shared/errors';
+import {
+  LoginTimeoutError,
+  LoginFailedError,
+  NotLoggedInError,
+  XHSError,
+} from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
 import { deleteCookiesFile, getCookiesInfo } from '../../shared/cookies';
 import { isLoggedIn, getLoginStatusWithProfile } from '../../shared/xhs.utils';
@@ -31,9 +36,13 @@ export class AuthService extends BaseService {
             // Find current user's profile link and extract user ID from URL
             const profileUrl = await page.evaluate(() => {
               const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-              const currentUserLink = userLinks.find(link => {
+              const currentUserLink = userLinks.find((link) => {
                 const text = link.textContent?.trim();
-                return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+                return (
+                  text === '我' ||
+                  (text && text.includes('profile')) ||
+                  (text && text.includes('用户'))
+                );
               });
               return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
             });
@@ -44,7 +53,7 @@ export class AuthService extends BaseService {
               if (userIdMatch) {
                 profile = {
                   userId: userIdMatch[1],
-                  profileUrl: profileUrl
+                  profileUrl: profileUrl,
                 };
               }
             }
@@ -68,11 +77,9 @@ export class AuthService extends BaseService {
           };
         }
 
-
         // Wait for login completion
         const checkInterval = 5; // Check every 5 seconds
         const maxChecks = timeout / checkInterval;
-
 
         for (let checkCount = 0; checkCount < maxChecks; checkCount++) {
           try {
@@ -115,9 +122,13 @@ export class AuthService extends BaseService {
             // Find current user's profile link and extract user ID from URL
             const profileUrl = await page.evaluate(() => {
               const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-              const currentUserLink = userLinks.find(link => {
+              const currentUserLink = userLinks.find((link) => {
                 const text = link.textContent?.trim();
-                return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+                return (
+                  text === '我' ||
+                  (text && text.includes('profile')) ||
+                  (text && text.includes('用户'))
+                );
               });
               return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
             });
@@ -129,7 +140,7 @@ export class AuthService extends BaseService {
                 profile = {
                   ...profile,
                   userId: userIdMatch[1],
-                  profileUrl: profileUrl
+                  profileUrl: profileUrl,
                 };
               }
             }
@@ -146,7 +157,9 @@ export class AuthService extends BaseService {
             profile,
           };
         } else {
-          throw new LoginFailedError('Login process completed but authentication verification failed');
+          throw new LoginFailedError(
+            'Login process completed but authentication verification failed'
+          );
         }
       } finally {
         await page.close();
@@ -190,7 +203,6 @@ export class AuthService extends BaseService {
     }
   }
 
-
   async checkStatus(browserPath?: string): Promise<StatusResult> {
     try {
       const page = await this.getBrowserManager().createPage(true, browserPath, true);
@@ -217,9 +229,13 @@ export class AuthService extends BaseService {
           // Find current user's profile link and extract user ID from URL
           const profileUrl = await page.evaluate(() => {
             const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-            const currentUserLink = userLinks.find(link => {
+            const currentUserLink = userLinks.find((link) => {
               const text = link.textContent?.trim();
-              return text === '我' || (text && text.includes('profile')) || (text && text.includes('用户'));
+              return (
+                text === '我' ||
+                (text && text.includes('profile')) ||
+                (text && text.includes('用户'))
+              );
             });
             return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
           });
@@ -230,7 +246,7 @@ export class AuthService extends BaseService {
             if (userIdMatch) {
               profile = {
                 userId: userIdMatch[1],
-                profileUrl: profileUrl
+                profileUrl: profileUrl,
               };
             }
           }
@@ -254,5 +270,4 @@ export class AuthService extends BaseService {
       throw new XHSError(`Status check failed: ${error}`, 'StatusCheckError', {}, error as Error);
     }
   }
-
 }

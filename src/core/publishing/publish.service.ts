@@ -34,7 +34,7 @@ const SELECTORS = {
     'input[accept*="video"]',
     'input[accept*="mp4"]',
     'input[class*="upload"]',
-    'input[class*="file"]'
+    'input[class*="file"]',
   ],
   SUCCESS_INDICATORS: [
     '.success-message',
@@ -44,7 +44,7 @@ const SELECTORS = {
     '.upload-success',
     '.video-upload-success',
     '.video-processing-complete',
-    '.upload-complete'
+    '.upload-complete',
   ],
   ERROR_INDICATORS: [
     '.error-message',
@@ -53,7 +53,7 @@ const SELECTORS = {
     '.toast-error',
     '.error-toast',
     '.upload-error',
-    '.video-upload-error'
+    '.video-upload-error',
   ],
   PROCESSING_INDICATORS: [
     '.video-processing',
@@ -62,14 +62,14 @@ const SELECTORS = {
     '[class*="processing"]',
     '[class*="uploading"]',
     '.progress-bar',
-    '.upload-status'
+    '.upload-status',
   ],
   COMPLETION_INDICATORS: [
     '.upload-complete',
     '.processing-complete',
     '.video-ready',
     '[class*="complete"]',
-    '[class*="ready"]'
+    '[class*="ready"]',
   ],
   TOAST_SELECTORS: [
     '.toast',
@@ -77,21 +77,21 @@ const SELECTORS = {
     '.notification',
     '[role="alert"]',
     '.ant-message',
-    '.el-message'
+    '.el-message',
   ],
   PUBLISH_PAGE_INDICATORS: [
     'div.upload-content',
     'div.submit',
     '.creator-editor',
     '.video-upload-container',
-    'input[type="file"]'
-  ]
+    'input[type="file"]',
+  ],
 } as const;
 
 const TEXT_PATTERNS = {
   SUCCESS: ['成功', 'success', '完成'],
   ERROR: ['失败', 'error', '错误'],
-  PROCESSING: ['处理中', '上传中', 'processing', 'uploading', '进度']
+  PROCESSING: ['处理中', '上传中', 'processing', 'uploading', '进度'],
 } as const;
 
 export class PublishService extends BaseService {
@@ -103,7 +103,10 @@ export class PublishService extends BaseService {
   }
 
   // Helper methods for element detection and text matching
-  private async findElementBySelectors(page: Page, selectors: readonly string[]): Promise<any | null> {
+  private async findElementBySelectors(
+    page: Page,
+    selectors: readonly string[]
+  ): Promise<any | null> {
     for (const selector of selectors) {
       const element = await page.$(selector);
       if (element) {
@@ -123,9 +126,12 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async checkTextPatterns(text: string | null, patterns: readonly string[]): Promise<boolean> {
+  private async checkTextPatterns(
+    text: string | null,
+    patterns: readonly string[]
+  ): Promise<boolean> {
     if (!text) return false;
-    return patterns.some(pattern => text.includes(pattern));
+    return patterns.some((pattern) => text.includes(pattern));
   }
 
   private async checkElementForPatterns(
@@ -137,7 +143,7 @@ export class PublishService extends BaseService {
       const element = await page.$(selector);
       if (element) {
         const text = await this.getElementText(element);
-        if (text && await this.checkTextPatterns(text, patterns)) {
+        if (text && (await this.checkTextPatterns(text, patterns))) {
           return { found: true, text, element };
         }
       }
@@ -197,7 +203,10 @@ export class PublishService extends BaseService {
       const page = await this.getBrowserManager().createPage(false, browserPath, true);
 
       try {
-        await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.creatorPublishUrl);
+        await this.getBrowserManager().navigateWithRetry(
+          page,
+          this.getConfig().xhs.creatorPublishUrl
+        );
 
         // Wait for page to load
         await sleep(3000);
@@ -211,17 +220,26 @@ export class PublishService extends BaseService {
         // Check if tab switch was successful and retry if needed
         const pageState = await page.evaluate(() => {
           return {
-            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]')).map((el: any) => el.textContent?.trim()).filter((t: any) => t)
+            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]'))
+              .map((el: any) => el.textContent?.trim())
+              .filter((t: any) => t),
           };
         });
 
         // If still showing video upload, try clicking the tab again
-        if (pageState.buttonTexts.includes('上传视频') && !pageState.buttonTexts.includes('上传图文')) {
+        if (
+          pageState.buttonTexts.includes('上传视频') &&
+          !pageState.buttonTexts.includes('上传图文')
+        ) {
           await this.clickUploadTab(page);
           await sleep(3000);
         }
 
-        let hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(page, uploadSelector, 30000);
+        let hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(
+          page,
+          uploadSelector,
+          30000
+        );
 
         if (!hasUploadContainer) {
           // Try alternative selectors for upload container
@@ -230,11 +248,15 @@ export class PublishService extends BaseService {
             '.upload-content',
             'div[class*="upload"]',
             'div[class*="image"]',
-            'input[type="file"]'
+            'input[type="file"]',
           ];
 
           for (const selector of alternativeSelectors) {
-            hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(page, selector, 10000);
+            hasUploadContainer = await this.getBrowserManager().waitForSelectorSafe(
+              page,
+              selector,
+              10000
+            );
             if (hasUploadContainer) {
               break;
             }
@@ -245,17 +267,18 @@ export class PublishService extends BaseService {
           throw new PublishError('Could not find upload container on publish page');
         }
 
-
         // Upload images
         await this.uploadImages(page, resolvedPaths);
 
         // Wait for images to be processed
         await sleep(3000);
 
-
         // Wait for page to transition to edit mode (check for title or content input)
         try {
-          await page.waitForSelector('input[placeholder*="标题"], div[contenteditable="true"], .tiptap.ProseMirror', { timeout: 15000 });
+          await page.waitForSelector(
+            'input[placeholder*="标题"], div[contenteditable="true"], .tiptap.ProseMirror',
+            { timeout: 15000 }
+          );
         } catch (error) {
           // Continue without waiting
         }
@@ -293,15 +316,14 @@ export class PublishService extends BaseService {
           content,
           imageCount: resolvedPaths.length,
           tags,
-          url: this.getConfig().xhs.creatorPublishUrl
+          url: this.getConfig().xhs.creatorPublishUrl,
         };
-
       } finally {
         await page.close();
       }
     } catch (error) {
       logger.error(`Publish error: ${error}`);
-        throw error;
+      throw error;
     }
   }
 
@@ -315,9 +337,10 @@ export class PublishService extends BaseService {
     // Validate resolved paths
     for (const resolvedPath of resolvedPaths) {
       // For local paths that aren't absolute, resolve them
-      const fullPath = resolvedPath.startsWith('/') || resolvedPath.match(/^[a-zA-Z]:/)
-        ? resolvedPath
-        : join(process.cwd(), resolvedPath);
+      const fullPath =
+        resolvedPath.startsWith('/') || resolvedPath.match(/^[a-zA-Z]:/)
+          ? resolvedPath
+          : join(process.cwd(), resolvedPath);
 
       if (!existsSync(fullPath)) {
         throw new InvalidImageError(`Image file not found: ${resolvedPath}`);
@@ -353,7 +376,7 @@ export class PublishService extends BaseService {
         '.creator-tab',
         '[role="tab"]',
         '.tab',
-        'div[class*="tab"]'
+        'div[class*="tab"]',
       ];
 
       let tabs: any[] = [];
@@ -370,20 +393,23 @@ export class PublishService extends BaseService {
         const allClickable = await page.$$('*');
         const possibleTabs: any[] = [];
 
-        for (const element of allClickable.slice(0, 50)) { // Limit to first 50 elements
+        for (const element of allClickable.slice(0, 50)) {
+          // Limit to first 50 elements
           try {
-            const tagName = await page.evaluate(el => el.tagName, element);
-            const text = await page.evaluate(el => el.textContent, element);
+            const tagName = await page.evaluate((el) => el.tagName, element);
+            const text = await page.evaluate((el) => el.textContent, element);
             const isVisible = await element.isIntersectingViewport();
 
-            if (isVisible && text && (
-              text.includes('上传视频') ||
-              text.includes('上传图文') ||
-              text.includes('写长文') ||
-              text.includes('视频') ||
-              text.includes('图文') ||
-              text.includes('图片')
-            )) {
+            if (
+              isVisible &&
+              text &&
+              (text.includes('上传视频') ||
+                text.includes('上传图文') ||
+                text.includes('写长文') ||
+                text.includes('视频') ||
+                text.includes('图文') ||
+                text.includes('图片'))
+            ) {
               possibleTabs.push({ element, text: text.trim() });
             }
           } catch (error) {
@@ -393,7 +419,11 @@ export class PublishService extends BaseService {
 
         // Look for image/text upload tab
         for (const tab of possibleTabs) {
-          if (tab.text.includes('上传图文') || tab.text.includes('图文') || tab.text.includes('图片')) {
+          if (
+            tab.text.includes('上传图文') ||
+            tab.text.includes('图文') ||
+            tab.text.includes('图片')
+          ) {
             await tab.element.click();
             await sleep(2000);
             return;
@@ -413,13 +443,16 @@ export class PublishService extends BaseService {
           const isVisible = await tab.isIntersectingViewport();
           if (!isVisible) continue;
 
-          const text = await page.evaluate(el => el.textContent, tab);
+          const text = await page.evaluate((el) => el.textContent, tab);
           if (text) {
             tabTexts.push(text.trim());
           }
 
           // Check if this is the image/text upload tab
-          if (text && (text.includes('上传图文') || text.includes('图文') || text.includes('图片'))) {
+          if (
+            text &&
+            (text.includes('上传图文') || text.includes('图文') || text.includes('图片'))
+          ) {
             imageTextTab = tab;
             break;
           }
@@ -456,11 +489,11 @@ export class PublishService extends BaseService {
 
   private async uploadImages(page: Page, imagePaths: string[]): Promise<void> {
     // Try primary file input selector
-    let fileInput = await page.$('input[type=file]') as any;
+    let fileInput = (await page.$('input[type=file]')) as any;
 
     if (!fileInput) {
       // Fallback to alternative selector
-      fileInput = await page.$('.upload-input') as any;
+      fileInput = (await page.$('.upload-input')) as any;
 
       if (!fileInput) {
         throw new PublishError('Could not find file upload input on page');
@@ -492,7 +525,7 @@ export class PublishService extends BaseService {
       'input[class*="title"]',
       'div[contenteditable="true"]',
       'textarea[placeholder*="标题"]',
-      'textarea[placeholder*="title"]'
+      'textarea[placeholder*="title"]',
     ];
 
     for (const selector of titleSelectors) {
@@ -521,7 +554,7 @@ export class PublishService extends BaseService {
         const input = allInputs[i];
         try {
           const isVisible = await input.isIntersectingViewport();
-          const tagName = await page.evaluate(el => el.tagName, input);
+          const tagName = await page.evaluate((el) => el.tagName, input);
 
           if (isVisible && (tagName === 'INPUT' || tagName === 'TEXTAREA')) {
             await input.click();
@@ -584,7 +617,7 @@ export class PublishService extends BaseService {
         '.content-editor',
         'div[role="textbox"]',
         'textbox[role="textbox"]',
-        'textbox[multiline]'
+        'textbox[multiline]',
       ];
 
       for (const selector of contentSelectors) {
@@ -616,7 +649,7 @@ export class PublishService extends BaseService {
 
       // Look for element with data-placeholder containing "输入正文描述"
       for (const p of pElements) {
-        const placeholder = await page.evaluate(el => el.getAttribute('data-placeholder'), p);
+        const placeholder = await page.evaluate((el) => el.getAttribute('data-placeholder'), p);
         if (placeholder?.includes('输入正文描述')) {
           return p;
         }
@@ -630,7 +663,7 @@ export class PublishService extends BaseService {
 
   private async findTextboxParent(page: Page, element: any): Promise<any | null> {
     try {
-      return await page.evaluateHandle(el => el.parentElement, element);
+      return await page.evaluateHandle((el) => el.parentElement, element);
     } catch (error) {
       return null;
     }
@@ -639,7 +672,10 @@ export class PublishService extends BaseService {
   private async fillContent(page: Page, content: string): Promise<void> {
     // Wait for content area to appear
     try {
-      await page.waitForSelector('div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, textbox[multiline]', { timeout: 10000 });
+      await page.waitForSelector(
+        'div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, textbox[multiline]',
+        { timeout: 10000 }
+      );
     } catch (error) {
       // Continue without waiting
     }
@@ -657,19 +693,32 @@ export class PublishService extends BaseService {
     if (!contentElement) {
       // Try to find any contenteditable or textarea element
       try {
-        const allContentElements = await page.$$('div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, p[contenteditable="true"], textbox[multiline]');
+        const allContentElements = await page.$$(
+          'div[role="textbox"][contenteditable="true"], .tiptap.ProseMirror, div[contenteditable="true"], textarea, [role="textbox"], .ql-editor, p[contenteditable="true"], textbox[multiline]'
+        );
 
         for (let i = 0; i < allContentElements.length; i++) {
           const element = allContentElements[i];
           try {
             const isVisible = await element.isIntersectingViewport();
-            const tagName = await page.evaluate(el => el.tagName, element);
-            const contentEditable = await page.evaluate(el => el.getAttribute('contenteditable'), element);
-            const role = await page.evaluate(el => el.getAttribute('role'), element);
-            const className = await page.evaluate(el => el.className, element);
-            const multiline = await page.evaluate(el => el.getAttribute('multiline'), element);
+            const tagName = await page.evaluate((el) => el.tagName, element);
+            const contentEditable = await page.evaluate(
+              (el) => el.getAttribute('contenteditable'),
+              element
+            );
+            const role = await page.evaluate((el) => el.getAttribute('role'), element);
+            const className = await page.evaluate((el) => el.className, element);
+            const multiline = await page.evaluate((el) => el.getAttribute('multiline'), element);
 
-            if (isVisible && (contentEditable === 'true' || tagName === 'TEXTAREA' || role === 'textbox' || className.includes('ql-editor') || className.includes('tiptap') || multiline === '')) {
+            if (
+              isVisible &&
+              (contentEditable === 'true' ||
+                tagName === 'TEXTAREA' ||
+                role === 'textbox' ||
+                className.includes('ql-editor') ||
+                className.includes('tiptap') ||
+                multiline === '')
+            ) {
               contentElement = element;
               break;
             }
@@ -687,18 +736,31 @@ export class PublishService extends BaseService {
       try {
         const allElements = await page.$$('*');
 
-        for (let i = 0; i < Math.min(allElements.length, 50); i++) { // Limit to first 50 elements
+        for (let i = 0; i < Math.min(allElements.length, 50); i++) {
+          // Limit to first 50 elements
           const element = allElements[i];
           try {
             const isVisible = await element.isIntersectingViewport();
-            const tagName = await page.evaluate(el => el.tagName, element);
-            const contentEditable = await page.evaluate(el => el.getAttribute('contenteditable'), element);
-            const className = await page.evaluate(el => el.className, element);
-            const placeholder = await page.evaluate(el => el.getAttribute('placeholder'), element);
+            const tagName = await page.evaluate((el) => el.tagName, element);
+            const contentEditable = await page.evaluate(
+              (el) => el.getAttribute('contenteditable'),
+              element
+            );
+            const className = await page.evaluate((el) => el.className, element);
+            const placeholder = await page.evaluate(
+              (el) => el.getAttribute('placeholder'),
+              element
+            );
 
-            if (isVisible && (contentEditable === 'true' || tagName === 'TEXTAREA' ||
-                className.includes('content') || className.includes('editor') ||
-                placeholder?.includes('内容') || placeholder?.includes('正文'))) {
+            if (
+              isVisible &&
+              (contentEditable === 'true' ||
+                tagName === 'TEXTAREA' ||
+                className.includes('content') ||
+                className.includes('editor') ||
+                placeholder?.includes('内容') ||
+                placeholder?.includes('正文'))
+            ) {
               contentElement = element;
               break;
             }
@@ -725,7 +787,10 @@ export class PublishService extends BaseService {
   }
 
   private async inputTags(contentElement: any, tags: string): Promise<void> {
-    const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    const tagList = tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
 
     for (const tag of tagList) {
       await this.inputTag(contentElement, tag);
@@ -753,7 +818,6 @@ export class PublishService extends BaseService {
       // Press Enter to confirm the tag
       await contentElement.press('Enter');
       await sleep(500);
-
     } catch (error) {
       logger.warn(`Failed to add tag ${tag}: ${error}`);
     }
@@ -802,79 +866,74 @@ export class PublishService extends BaseService {
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxWaitTime) {
-        // Check for success indicators
-        const successIndicators = [
+      // Check for success indicators
+      const successIndicators = [
         '.success-message',
-          '.publish-success',
+        '.publish-success',
         '[data-testid="publish-success"]',
-        '.toast-success'
-        ];
+        '.toast-success',
+      ];
 
-        for (const selector of successIndicators) {
+      for (const selector of successIndicators) {
         const element = await page.$(selector);
         if (element) {
-            await sleep(2000); // Wait a bit more for any final processing
-            return;
-          }
-        }
-
-        // Check for error indicators
-        const errorIndicators = [
-          '.error-message',
-          '.publish-error',
-        '[data-testid="publish-error"]',
-        '.toast-error',
-        '.error-toast'
-        ];
-
-        for (const selector of errorIndicators) {
-        const element = await page.$(selector);
-        if (element) {
-          const errorText = await page.evaluate(el => el.textContent, element);
-            throw new PublishError(`Publish failed with error: ${errorText}`);
-          }
-        }
-
-      // Check if we're still on the publish page
-        const publishPageIndicators = [
-          'div.upload-content',
-        'div.submit',
-        '.creator-editor'
-        ];
-
-        let stillOnPublishPage = false;
-        for (const selector of publishPageIndicators) {
-        const element = await page.$(selector);
-        if (element) {
-            stillOnPublishPage = true;
-            break;
-          }
-        }
-
-        if (!stillOnPublishPage) {
-          // We've left the publish page, likely successful
-          logger.debug('Left publish page, assuming success');
+          await sleep(2000); // Wait a bit more for any final processing
           return;
         }
+      }
 
-      // Check for toast messages
-        const toastSelectors = [
-          '.toast',
-        '.message',
-          '.notification',
-        '[role="alert"]'
-        ];
+      // Check for error indicators
+      const errorIndicators = [
+        '.error-message',
+        '.publish-error',
+        '[data-testid="publish-error"]',
+        '.toast-error',
+        '.error-toast',
+      ];
 
-        for (const selector of toastSelectors) {
+      for (const selector of errorIndicators) {
         const element = await page.$(selector);
         if (element) {
-          const toastText = await page.evaluate(el => el.textContent, element);
-            if (toastText) {
+          const errorText = await page.evaluate((el) => el.textContent, element);
+          throw new PublishError(`Publish failed with error: ${errorText}`);
+        }
+      }
+
+      // Check if we're still on the publish page
+      const publishPageIndicators = ['div.upload-content', 'div.submit', '.creator-editor'];
+
+      let stillOnPublishPage = false;
+      for (const selector of publishPageIndicators) {
+        const element = await page.$(selector);
+        if (element) {
+          stillOnPublishPage = true;
+          break;
+        }
+      }
+
+      if (!stillOnPublishPage) {
+        // We've left the publish page, likely successful
+        logger.debug('Left publish page, assuming success');
+        return;
+      }
+
+      // Check for toast messages
+      const toastSelectors = ['.toast', '.message', '.notification', '[role="alert"]'];
+
+      for (const selector of toastSelectors) {
+        const element = await page.$(selector);
+        if (element) {
+          const toastText = await page.evaluate((el) => el.textContent, element);
+          if (toastText) {
             if (toastText.includes('成功') || toastText.includes('success')) {
               logger.debug(`Found success toast: ${toastText}`);
               return;
-            } else if (toastText.includes('失败') || toastText.includes('error') || toastText.includes('错误')) {
-                throw new PublishError(`Publish failed: ${toastText}`);
+            } else if (
+              toastText.includes('失败') ||
+              toastText.includes('error') ||
+              toastText.includes('错误')
+            ) {
+              throw new PublishError(`Publish failed: ${toastText}`);
             }
           }
         }
@@ -918,7 +977,10 @@ export class PublishService extends BaseService {
         }
 
         // Check if we've left the publish page (likely success)
-        const stillOnPage = await this.findElementBySelectors(page, SELECTORS.PUBLISH_PAGE_INDICATORS);
+        const stillOnPage = await this.findElementBySelectors(
+          page,
+          SELECTORS.PUBLISH_PAGE_INDICATORS
+        );
         if (!stillOnPage) {
           logger.debug('Left publish page, assuming video publish success');
           return true;
@@ -1016,9 +1078,8 @@ export class PublishService extends BaseService {
           content,
           imageCount: 0, // Videos don't have image count
           tags,
-          url: this.getConfig().xhs.creatorVideoPublishUrl
+          url: this.getConfig().xhs.creatorVideoPublishUrl,
         };
-
       } finally {
         await page.close();
       }
@@ -1081,7 +1142,10 @@ export class PublishService extends BaseService {
     tags: string
   ): Promise<void> {
     // Navigate to video upload page
-    await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.creatorVideoPublishUrl);
+    await this.getBrowserManager().navigateWithRetry(
+      page,
+      this.getConfig().xhs.creatorVideoPublishUrl
+    );
 
     // Wait for page to load
     await sleep(VIDEO_TIMEOUTS.PAGE_LOAD);
@@ -1135,14 +1199,18 @@ export class PublishService extends BaseService {
     const ext = videoPath.toLowerCase().split('.').pop();
     const allowedExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv'];
     if (!ext || !allowedExtensions.includes(ext)) {
-      throw new PublishError(`Unsupported video format: ${videoPath}. Supported: ${allowedExtensions.join(', ')}`);
+      throw new PublishError(
+        `Unsupported video format: ${videoPath}. Supported: ${allowedExtensions.join(', ')}`
+      );
     }
 
     // Check file size (XHS typically has limits)
     const maxSizeInMB = 500; // 500MB limit
     const fileSizeInMB = stats.size / (1024 * 1024);
     if (fileSizeInMB > maxSizeInMB) {
-      throw new PublishError(`Video file too large: ${fileSizeInMB.toFixed(2)}MB. Maximum allowed: ${maxSizeInMB}MB`);
+      throw new PublishError(
+        `Video file too large: ${fileSizeInMB.toFixed(2)}MB. Maximum allowed: ${maxSizeInMB}MB`
+      );
     }
 
     return resolvedPath;
@@ -1156,7 +1224,7 @@ export class PublishService extends BaseService {
         '.creator-tab',
         '[role="tab"]',
         '.tab',
-        'div[class*="tab"]'
+        'div[class*="tab"]',
       ];
 
       let tabs: any[] = [];
@@ -1181,10 +1249,13 @@ export class PublishService extends BaseService {
           const isVisible = await tab.isIntersectingViewport();
           if (!isVisible) continue;
 
-          const text = await page.evaluate(el => el.textContent, tab);
+          const text = await page.evaluate((el) => el.textContent, tab);
 
           // Check if this is the video upload tab
-          if (text && (text.includes('上传视频') || text.includes('视频') || text.includes('video'))) {
+          if (
+            text &&
+            (text.includes('上传视频') || text.includes('视频') || text.includes('video'))
+          ) {
             videoTab = tab;
             break;
           }
@@ -1238,7 +1309,6 @@ export class PublishService extends BaseService {
 
       // Wait for video processing to complete (this can take a while)
       await this.waitForVideoProcessing(page);
-
     } catch (error) {
       throw new PublishError(`Failed to upload video ${videoPath}: ${error}`);
     }

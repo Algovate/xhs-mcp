@@ -144,24 +144,29 @@ export async function getLoginStatusWithProfile(page: Page): Promise<{
     }
 
     // If logged in, try to extract profile information from current page
-    let profileData: any = {};
+    let profileData: Record<string, unknown> = {};
     try {
       profileData = await page.evaluate(() => {
-        const profile: any = {};
+        const profile: Record<string, unknown> = {};
 
         // Extract user ID from URL if on profile page
+        // eslint-disable-next-line no-undef
         const urlMatch = window.location.href.match(/\/user\/profile\/([a-f0-9]+)/);
         if (urlMatch) {
           profile.userId = urlMatch[1];
         }
 
         // Try to find user nickname
-        const nameElement = document.querySelector('.user-name, [class*="user-name"], [class*="nickname"]');
+        // eslint-disable-next-line no-undef
+        const nameElement = document.querySelector(
+          '.user-name, [class*="user-name"], [class*="nickname"]'
+        );
         if (nameElement) {
           profile.nickname = nameElement.textContent?.trim();
         }
 
         // Try to find user info text that might contain stats
+        // eslint-disable-next-line no-undef
         const infoElement = document.querySelector('.user-info, [class*="user-info"]');
         if (infoElement) {
           const infoText = infoElement.textContent || '';
@@ -190,23 +195,26 @@ export async function getLoginStatusWithProfile(page: Page): Promise<{
         }
 
         // Try to find avatar
-        const avatarElement = document.querySelector('img[class*="avatar"], img[class*="profile"], .avatar img, .profile img') as HTMLImageElement;
+        // eslint-disable-next-line no-undef
+        const avatarElement = document.querySelector(
+          'img[class*="avatar"], img[class*="profile"], .avatar img, .profile img'
+        ) as HTMLImageElement;
         if (avatarElement) {
           profile.avatar = avatarElement.src;
         }
 
         return profile;
       });
-    } catch (error) {
-      console.error('❌ Error in page.evaluate:', error);
+    } catch {
+      console.error('❌ Error in page.evaluate');
       profileData = {};
     }
 
     return {
       isLoggedIn: true,
-      profile: Object.keys(profileData).length > 0 ? profileData : undefined
+      profile: Object.keys(profileData).length > 0 ? profileData : undefined,
     };
-  } catch (error) {
+  } catch {
     // If there's an error, fall back to basic login check
     try {
       const elements = await page.$$(LOGIN_OK_SELECTOR);

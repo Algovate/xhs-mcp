@@ -60,8 +60,9 @@ const NOTE_SELECTORS = {
   STAT_ELEMENTS: '[class*="count"], [class*="stat"], [class*="number"]',
   TAG_ELEMENTS: '[class*="tag"], [class*="label"]',
   NOTE_LINK: 'a[href*="/explore/"], a[href*="/note/"]',
-  VISIBILITY_INDICATORS: '[class*="private"], [class*="visibility"], [class*="lock"], [class*="eye"], [class*="public"], [class*="friends"], [class*="status"]',
-  PUBLISH_TIME: '[class*="time"], [class*="date"], [class*="publish-time"]'
+  VISIBILITY_INDICATORS:
+    '[class*="private"], [class*="visibility"], [class*="lock"], [class*="eye"], [class*="public"], [class*="friends"], [class*="status"]',
+  PUBLISH_TIME: '[class*="time"], [class*="date"], [class*="publish-time"]',
 } as const;
 
 export class NoteService extends BaseService {
@@ -83,9 +84,9 @@ export class NoteService extends BaseService {
   ): Promise<UserNotesResult> {
     this.validateGetUserNotesParams(limit);
 
-      const page = await this.getBrowserManager().createPage(true, browserPath, true);
+    const page = await this.getBrowserManager().createPage(true, browserPath, true);
 
-      try {
+    try {
       // Navigate to creator center note manager
       await this.navigateToCreatorCenter(page);
       await this.verifyUserAuthentication(page);
@@ -100,9 +101,8 @@ export class NoteService extends BaseService {
         total: notesData.length,
         hasMore: notesData.length > limit,
         nextCursor: this.getNextCursor(limitedNotes),
-        operation: 'getUserNotes'
+        operation: 'getUserNotes',
       } as unknown as UserNotesResult;
-
     } catch (error) {
       logger.error(`Failed to get user notes: ${error}`);
       return {
@@ -111,13 +111,12 @@ export class NoteService extends BaseService {
         total: 0,
         hasMore: false,
         error: error instanceof Error ? error.message : String(error),
-        operation: 'getUserNotes'
+        operation: 'getUserNotes',
       } as unknown as UserNotesResult;
     } finally {
       await page.close();
     }
   }
-
 
   /**
    * Validate parameters for getUserNotes method
@@ -140,7 +139,8 @@ export class NoteService extends BaseService {
       await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
       await sleep(3000); // Wait for page to load completely
     } catch (error) {
-      throw new NoteParsingError('Failed to navigate to creator center',
+      throw new NoteParsingError(
+        'Failed to navigate to creator center',
         { url: 'https://creator.xiaohongshu.com/new/note-manager?source=official' },
         error instanceof Error ? error : new Error(String(error))
       );
@@ -153,10 +153,12 @@ export class NoteService extends BaseService {
   private async verifyUserAuthentication(page: any): Promise<void> {
     try {
       // Check for login elements on the current page
-        const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
+      const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
 
       // Also check for creator center specific elements
-      const creatorElements = await page.$$('[class*="user"], [class*="profile"], [class*="avatar"]');
+      const creatorElements = await page.$$(
+        '[class*="user"], [class*="profile"], [class*="avatar"]'
+      );
 
       if (loginElements.length === 0 && creatorElements.length === 0) {
         // Check if we're on a login page
@@ -164,7 +166,7 @@ export class NoteService extends BaseService {
         if (currentUrl.includes('login') || currentUrl.includes('signin')) {
           throw new NotLoggedInError('User not logged in', {
             operation: 'getUserNotes',
-            url: currentUrl
+            url: currentUrl,
           });
         }
 
@@ -173,7 +175,7 @@ export class NoteService extends BaseService {
         if (noteElements.length === 0) {
           throw new NotLoggedInError('User not logged in or no notes found', {
             operation: 'getUserNotes',
-            url: currentUrl
+            url: currentUrl,
           });
         }
       }
@@ -181,14 +183,13 @@ export class NoteService extends BaseService {
       if (error instanceof NotLoggedInError) {
         throw error;
       }
-      throw new NoteParsingError('Failed to verify authentication',
+      throw new NoteParsingError(
+        'Failed to verify authentication',
         { operation: 'verifyAuth' },
         error instanceof Error ? error : new Error(String(error))
       );
     }
   }
-
-
 
   /**
    * Extract notes from creator center page
@@ -220,7 +221,7 @@ export class NoteService extends BaseService {
               tags: [],
               url: '',
               visibility: 'unknown',
-              visibilityText: ''
+              visibilityText: '',
             };
 
             // Extract note ID from data attributes or impression data
@@ -257,7 +258,7 @@ export class NoteService extends BaseService {
               '[style*="background-image"]', // Background images
               'div[class*="cover"] img',
               'div[class*="thumbnail"] img',
-              'div[class*="media"] img'
+              'div[class*="media"] img',
             ];
 
             let imageElements: any[] = [];
@@ -290,12 +291,14 @@ export class NoteService extends BaseService {
                 src = img.getAttribute('data-original');
               }
 
-              if (src &&
-                  !src.includes('avatar') &&
-                  !src.includes('icon') &&
-                  !src.includes('logo') &&
-                  !src.includes('placeholder') &&
-                  src.startsWith('http')) {
+              if (
+                src &&
+                !src.includes('avatar') &&
+                !src.includes('icon') &&
+                !src.includes('logo') &&
+                !src.includes('placeholder') &&
+                src.startsWith('http')
+              ) {
                 note.images.push(src);
                 console.log('Added image:', src);
               }
@@ -322,7 +325,9 @@ export class NoteService extends BaseService {
               const timeText = timeElement.textContent?.trim() || '';
               if (timeText.includes('发布于')) {
                 // Parse Chinese date format
-                const dateMatch = timeText.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})/);
+                const dateMatch = timeText.match(
+                  /(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})/
+                );
                 if (dateMatch) {
                   const [, year, month, day, hour, minute] = dateMatch;
                   const publishDate = new Date(
@@ -377,19 +382,19 @@ export class NoteService extends BaseService {
 
       return notesData;
     } catch (error) {
-      throw new NoteParsingError('Failed to extract notes from creator center',
+      throw new NoteParsingError(
+        'Failed to extract notes from creator center',
         { operation: 'extractNotesFromCreatorCenter' },
         error instanceof Error ? error : new Error(String(error))
       );
     }
   }
 
-
   /**
    * Limit notes array to specified count
    */
   private limitNotes(notes: NoteExtractionData[], limit: number): UserNote[] {
-    return notes.slice(0, limit).map(note => ({
+    return notes.slice(0, limit).map((note) => ({
       id: note.id,
       title: note.title,
       content: note.content,
@@ -403,7 +408,7 @@ export class NoteService extends BaseService {
       tags: Object.freeze([...note.tags]),
       url: note.url,
       visibility: note.visibility,
-      visibilityText: note.visibilityText
+      visibilityText: note.visibilityText,
     }));
   }
 

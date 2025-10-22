@@ -150,7 +150,8 @@ export const XHS_TOOL_SCHEMAS: ToolSchema[] = [
         media_paths: {
           type: 'array',
           items: { type: 'string' },
-          description: 'List of media file paths (required, non-empty). For images: 1-18 image files. For videos: exactly 1 video file.',
+          description:
+            'List of media file paths (required, non-empty). For images: 1-18 image files. For videos: exactly 1 video file.',
           maxItems: 18,
         },
         tags: {

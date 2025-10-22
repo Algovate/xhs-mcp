@@ -2,10 +2,28 @@
  * Feed operations service for XHS MCP Server
  */
 
-import { Config, FeedListResult, SearchResult, FeedDetailResult, CommentResult, FeedItem } from '../../shared/types';
-import { FeedError, FeedParsingError, FeedNotFoundError, NotLoggedInError, XHSError } from '../../shared/errors';
+import {
+  Config,
+  FeedListResult,
+  SearchResult,
+  FeedDetailResult,
+  CommentResult,
+  FeedItem,
+} from '../../shared/types';
+import {
+  FeedError,
+  FeedParsingError,
+  FeedNotFoundError,
+  NotLoggedInError,
+  XHSError,
+} from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
-import { makeSearchUrl, makeFeedDetailUrl, extractInitialState, isLoggedIn } from '../../shared/xhs.utils';
+import {
+  makeSearchUrl,
+  makeFeedDetailUrl,
+  extractInitialState,
+  isLoggedIn,
+} from '../../shared/xhs.utils';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 
@@ -33,12 +51,12 @@ export class FeedService extends BaseService {
         let feedData: string | null = null;
         let attempts = 0;
         const maxAttempts = 10;
-        
+
         while (attempts < maxAttempts && !feedData) {
           await sleep(2000); // Wait 2 seconds between attempts
           attempts++;
-          
-          feedData = await page.evaluate(`
+
+          feedData = (await page.evaluate(`
             (() => {
               if (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.feed && window.__INITIAL_STATE__.feed.feeds && window.__INITIAL_STATE__.feed.feeds._value) {
                 try {
@@ -52,8 +70,8 @@ export class FeedService extends BaseService {
               }
               return null;
             })()
-          `) as string | null;
-          
+          `)) as string | null;
+
           if (feedData) {
             logger.info(`Feed results loaded after ${attempts} attempts`);
             break;
@@ -61,10 +79,13 @@ export class FeedService extends BaseService {
         }
 
         if (!feedData) {
-          throw new FeedParsingError(`Could not extract feed data after ${maxAttempts} attempts. The page may not be fully loaded or the state structure has changed.`, {
-            url: this.getConfig().xhs.homeUrl,
-            suggestion: 'Try logging in first using xhs_auth_login tool',
-          });
+          throw new FeedParsingError(
+            `Could not extract feed data after ${maxAttempts} attempts. The page may not be fully loaded or the state structure has changed.`,
+            {
+              url: this.getConfig().xhs.homeUrl,
+              suggestion: 'Try logging in first using xhs_auth_login tool',
+            }
+          );
         }
 
         const feedsValue = JSON.parse(feedData) as unknown[];
@@ -84,7 +105,12 @@ export class FeedService extends BaseService {
         throw error;
       }
       logger.error(`Failed to get feed list: ${error}`);
-      throw new XHSError(`Failed to get feed list: ${error}`, 'GetFeedListError', {}, error as Error);
+      throw new XHSError(
+        `Failed to get feed list: ${error}`,
+        'GetFeedListError',
+        {},
+        error as Error
+      );
     }
   }
 
@@ -111,7 +137,7 @@ export class FeedService extends BaseService {
           await sleep(2000); // Wait 2 seconds between attempts
           attempts++;
 
-          searchData = await page.evaluate(`
+          searchData = (await page.evaluate(`
             (() => {
               if (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.search && window.__INITIAL_STATE__.search.feeds && window.__INITIAL_STATE__.search.feeds._value) {
                 try {
@@ -125,7 +151,7 @@ export class FeedService extends BaseService {
               }
               return null;
             })()
-          `) as string | null;
+          `)) as string | null;
 
           if (searchData) {
             logger.info(`Search results loaded after ${attempts} attempts`);
@@ -134,10 +160,13 @@ export class FeedService extends BaseService {
         }
 
         if (!searchData) {
-          throw new FeedParsingError(`Could not extract search results for keyword: ${trimmedKeyword} after ${maxAttempts} attempts`, {
-            keyword: trimmedKeyword,
-            url: searchUrl,
-          });
+          throw new FeedParsingError(
+            `Could not extract search results for keyword: ${trimmedKeyword} after ${maxAttempts} attempts`,
+            {
+              keyword: trimmedKeyword,
+              url: searchUrl,
+            }
+          );
         }
 
         const feedsValue = JSON.parse(searchData) as unknown[];
@@ -157,11 +186,20 @@ export class FeedService extends BaseService {
         throw error;
       }
       logger.error(`Feed search failed for keyword '${trimmedKeyword}': ${error}`);
-      throw new XHSError(`Feed search failed: ${error}`, 'SearchFeedsError', { keyword: trimmedKeyword }, error as Error);
+      throw new XHSError(
+        `Feed search failed: ${error}`,
+        'SearchFeedsError',
+        { keyword: trimmedKeyword },
+        error as Error
+      );
     }
   }
 
-  async getFeedDetail(feedId: string, xsecToken: string, browserPath?: string): Promise<FeedDetailResult> {
+  async getFeedDetail(
+    feedId: string,
+    xsecToken: string,
+    browserPath?: string
+  ): Promise<FeedDetailResult> {
     if (!feedId || !xsecToken) {
       throw new FeedError('Both feed_id and xsec_token are required');
     }
@@ -204,15 +242,29 @@ export class FeedService extends BaseService {
         await page.close();
       }
     } catch (error) {
-      if (error instanceof FeedError || error instanceof FeedNotFoundError || error instanceof FeedParsingError) {
+      if (
+        error instanceof FeedError ||
+        error instanceof FeedNotFoundError ||
+        error instanceof FeedParsingError
+      ) {
         throw error;
       }
       logger.error(`Failed to get feed detail for ${feedId}: ${error}`);
-      throw new XHSError(`Failed to get feed detail: ${error}`, 'GetFeedDetailError', { feedId }, error as Error);
+      throw new XHSError(
+        `Failed to get feed detail: ${error}`,
+        'GetFeedDetailError',
+        { feedId },
+        error as Error
+      );
     }
   }
 
-  async commentOnFeed(feedId: string, xsecToken: string, note: string, browserPath?: string): Promise<CommentResult> {
+  async commentOnFeed(
+    feedId: string,
+    xsecToken: string,
+    note: string,
+    browserPath?: string
+  ): Promise<CommentResult> {
     if (!feedId || !xsecToken || !note) {
       throw new FeedError('feed_id, xsec_token, and note are all required');
     }
@@ -284,8 +336,12 @@ export class FeedService extends BaseService {
         throw error;
       }
       logger.error(`Failed to comment on feed ${feedId}: ${error}`);
-      throw new XHSError(`Failed to comment on feed: ${error}`, 'CommentOnFeedError', { feedId }, error as Error);
+      throw new XHSError(
+        `Failed to comment on feed: ${error}`,
+        'CommentOnFeedError',
+        { feedId },
+        error as Error
+      );
     }
   }
-
 }

@@ -70,10 +70,14 @@ export class ResourceHandlers {
 
       return JSON.stringify(statusData, null, 2);
     } catch (error) {
-      return JSON.stringify({
-        server: { status: 'error', error: String(error) },
-        framework: 'MCP TypeScript',
-      }, null, 2);
+      return JSON.stringify(
+        {
+          server: { status: 'error', error: String(error) },
+          framework: 'MCP TypeScript',
+        },
+        null,
+        2
+      );
     }
   }
 
