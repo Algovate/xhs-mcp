@@ -314,7 +314,7 @@ export class NoteService extends BaseService {
             }
             
             if (linkElement) {
-              const href = linkElement.href;
+              const href = (linkElement as HTMLAnchorElement).href;
                 const idMatch = href.match(/\/explore\/([a-f0-9]+)/);
                 if (idMatch) {
                   note.id = idMatch[1];
@@ -441,14 +441,62 @@ export class NoteService extends BaseService {
               note.content = title;
             }
 
-            // Extract images
-            const imageElements = element.querySelectorAll(selectors.IMAGE_ELEMENTS);
+            // Extract images - try multiple approaches for creator center
+            const imageSelectors = [
+              selectors.IMAGE_ELEMENTS,
+              'img', // Try all img elements
+              '[class*="image"]',
+              '[class*="photo"]',
+              '[class*="pic"]',
+              '[class*="img"]',
+              '[style*="background-image"]', // Background images
+              'div[class*="cover"] img',
+              'div[class*="thumbnail"] img',
+              'div[class*="media"] img'
+            ];
+            
+            let imageElements: any[] = [];
+            for (const selector of imageSelectors) {
+              const elements = element.querySelectorAll(selector);
+              if (elements.length > 0) {
+                imageElements = Array.from(elements);
+                console.log(`Found ${elements.length} images with selector: ${selector}`);
+                break;
+              }
+            }
+            
             imageElements.forEach((img: any) => {
-              const src = img.src;
-              if (src && !src.includes('avatar') && !src.includes('icon')) {
+              let src = '';
+              
+              // Try different ways to get image source
+              if (img.src) {
+                src = img.src;
+              } else if (img.style && img.style.backgroundImage) {
+                // Extract from background-image CSS
+                const bgMatch = img.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                if (bgMatch) {
+                  src = bgMatch[1];
+                }
+              } else if (img.getAttribute('data-src')) {
+                // Lazy loaded images
+                src = img.getAttribute('data-src');
+              } else if (img.getAttribute('data-original')) {
+                // Another lazy loading attribute
+                src = img.getAttribute('data-original');
+              }
+              
+              if (src && 
+                  !src.includes('avatar') && 
+                  !src.includes('icon') && 
+                  !src.includes('logo') &&
+                  !src.includes('placeholder') &&
+                  src.startsWith('http')) {
                 note.images.push(src);
+                console.log('Added image:', src);
               }
             });
+            
+            console.log(`Note ${note.id} has ${note.images.length} images`);
 
             // Extract stats - look for numbers in the element
             const allText = element.textContent || '';
@@ -572,13 +620,13 @@ export class NoteService extends BaseService {
     for (const linkSelector of linkSelectors) {
       linkElement = element.querySelector(linkSelector);
       if (linkElement) {
-        console.log(`Found link with selector "${linkSelector}":`, linkElement.href);
+        console.log(`Found link with selector "${linkSelector}":`, (linkElement as HTMLAnchorElement).href);
         break;
       }
     }
     
     if (linkElement) {
-      const href = linkElement.href;
+      const href = (linkElement as HTMLAnchorElement).href;
       console.log('Link href:', href);
       const idMatch = href.match(/\/explore\/([a-f0-9]+)/);
       if (idMatch) {
