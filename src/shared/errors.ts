@@ -113,3 +113,21 @@ export class PublishFailedError extends PublishError {
     super(message, context, originalError);
   }
 }
+
+export class NoteError extends XHSError {
+  constructor(message: string, context?: XHSErrorContext, originalError?: Error) {
+    super(message, 'NoteError', context, originalError);
+  }
+}
+
+export class ProfileError extends NoteError {
+  constructor(message: string, context?: XHSErrorContext, originalError?: Error) {
+    super(message, context, originalError);
+  }
+}
+
+export class NoteParsingError extends NoteError {
+  constructor(message: string, context?: XHSErrorContext, originalError?: Error) {
+    super(message, context, originalError);
+  }
+}

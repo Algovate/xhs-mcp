@@ -13,3 +13,6 @@ export * from './feeds';
 
 // Content publishing module
 export * from './publishing';
+
+// User notes module
+export * from './notes';

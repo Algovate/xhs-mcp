@@ -13,6 +13,7 @@ import { XHSMCPServer, XHSHTTPMCPServer } from '../server/index';
 import { XHS_TOOL_SCHEMAS } from '../server/schemas/tool.schemas';
 import { FeedService } from '../core/feeds/feed.service';
 import { PublishService } from '../core/publishing/publish.service';
+import { NoteService } from '../core/notes/note.service';
 
 async function main(): Promise<void> {
   const config = getConfig();
@@ -187,6 +188,24 @@ async function main(): Promise<void> {
       const feedService = new FeedService(config);
       try {
         const result = await feedService.searchFeeds(opts.keyword, opts.browserPath);
+        printSuccess(result);
+      } catch (error) {
+        printError(error);
+      }
+    });
+
+  // Notes: list user's published notes
+  program
+    .command('note list')
+    .description('List current user\'s published notes')
+    .option('-l, --limit <number>', 'Maximum number of notes to retrieve', '20')
+    .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
+    .option('-b, --browser-path <path>', 'Custom browser binary path')
+    .action(async (opts: { limit: string; cursor?: string; browserPath?: string }) => {
+      const noteService = new NoteService(config);
+      try {
+        const limit = parseInt(opts.limit) || 20;
+        const result = await noteService.getUserNotes(limit, opts.cursor, opts.browserPath);
         printSuccess(result);
       } catch (error) {
         printError(error);
