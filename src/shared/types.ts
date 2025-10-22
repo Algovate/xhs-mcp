@@ -230,6 +230,7 @@ export interface PublishResult {
   readonly imageCount: number;
   readonly tags: string;
   readonly url: string;
+  readonly noteId?: string;
 }
 
 /**

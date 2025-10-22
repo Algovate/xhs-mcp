@@ -304,7 +304,7 @@ export class PublishService extends BaseService {
         await this.submitPost(page);
 
         // Wait for completion and check result
-        await this.waitForPublishCompletion(page);
+        const noteId = await this.waitForPublishCompletion(page);
 
         // Save cookies
         await this.getBrowserManager().saveCookiesFromPage(page);
@@ -317,6 +317,7 @@ export class PublishService extends BaseService {
           imageCount: resolvedPaths.length,
           tags,
           url: this.getConfig().xhs.creatorPublishUrl,
+          noteId: noteId || undefined,
         };
       } finally {
         await page.close();
@@ -799,8 +800,10 @@ export class PublishService extends BaseService {
 
   private async inputTag(contentElement: any, tag: string): Promise<void> {
     try {
+      // Get the page from the content element's context
+      const page = await contentElement.page();
+      
       // Try to find topic suggestion container
-      const page = contentElement.page();
       const topicContainer = await page.$('#creator-editor-topic-container');
 
       if (topicContainer) {
@@ -861,7 +864,7 @@ export class PublishService extends BaseService {
     }
   }
 
-  private async waitForPublishCompletion(page: Page): Promise<void> {
+  private async waitForPublishCompletion(page: Page): Promise<string | null> {
     const maxWaitTime = 60000; // 60 seconds
     const startTime = Date.now();
 
@@ -878,7 +881,7 @@ export class PublishService extends BaseService {
         const element = await page.$(selector);
         if (element) {
           await sleep(2000); // Wait a bit more for any final processing
-          return;
+          return await this.extractNoteIdFromPage(page);
         }
       }
 
@@ -914,7 +917,7 @@ export class PublishService extends BaseService {
       if (!stillOnPublishPage) {
         // We've left the publish page, likely successful
         logger.debug('Left publish page, assuming success');
-        return;
+        return await this.extractNoteIdFromPage(page);
       }
 
       // Check for toast messages
@@ -927,7 +930,7 @@ export class PublishService extends BaseService {
           if (toastText) {
             if (toastText.includes('成功') || toastText.includes('success')) {
               logger.debug(`Found success toast: ${toastText}`);
-              return;
+              return await this.extractNoteIdFromPage(page);
             } else if (
               toastText.includes('失败') ||
               toastText.includes('error') ||
@@ -945,7 +948,96 @@ export class PublishService extends BaseService {
     throw new PublishError('Publish completion timeout - could not determine result');
   }
 
-  private async waitForVideoPublishCompletion(page: Page): Promise<void> {
+  private async extractNoteIdFromPage(page: Page): Promise<string | null> {
+    try {
+      // Method 1: Try to extract from URL if redirected to note page
+      const currentUrl = page.url();
+      logger.debug(`Current URL after publish: ${currentUrl}`);
+      
+      // Check if we're on a note page (URL contains /explore/ or /discovery/)
+      const noteIdMatch = currentUrl.match(/\/explore\/([a-f0-9]+)/i) || 
+                         currentUrl.match(/\/discovery\/([a-f0-9]+)/i);
+      
+      if (noteIdMatch && noteIdMatch[1]) {
+        const noteId = noteIdMatch[1];
+        logger.debug(`Extracted note ID from URL: ${noteId}`);
+        return noteId;
+      }
+
+      // Method 2: Try to find note ID in page content or data attributes
+      const noteIdFromPage = await page.evaluate(() => {
+        // Look for data attributes that might contain note ID
+        const elementsWithData = document.querySelectorAll('[data-note-id], [data-id], [data-impression]');
+        for (let i = 0; i < elementsWithData.length; i++) {
+          const element = elementsWithData[i];
+          const noteId = element.getAttribute('data-note-id') || 
+                        element.getAttribute('data-id') || 
+                        element.getAttribute('data-impression');
+          if (noteId && noteId.length > 10) { // Note IDs are typically long
+            return noteId;
+          }
+        }
+
+        // Look for links to note pages
+        const noteLinks = document.querySelectorAll('a[href*="/explore/"], a[href*="/discovery/"]');
+        for (let i = 0; i < noteLinks.length; i++) {
+          const link = noteLinks[i];
+          const href = link.getAttribute('href');
+          if (href) {
+            const match = href.match(/\/explore\/([a-f0-9]+)/i) || 
+                         href.match(/\/discovery\/([a-f0-9]+)/i);
+            if (match && match[1]) {
+              return match[1];
+            }
+          }
+        }
+
+        // Look for any text that looks like a note ID (long hex string)
+        const textContent = document.body.textContent || '';
+        const noteIdPattern = /[a-f0-9]{20,}/gi;
+        const matches = textContent.match(noteIdPattern);
+        if (matches && matches.length > 0) {
+          // Return the first long hex string found
+          return matches[0];
+        }
+
+        return null;
+      });
+
+      if (noteIdFromPage) {
+        logger.debug(`Extracted note ID from page content: ${noteIdFromPage}`);
+        return noteIdFromPage;
+      }
+
+      // Method 3: Try to get the latest note ID using NoteService (fallback)
+      logger.debug('Could not extract note ID from page, trying fallback method');
+      try {
+        // Wait a bit for the note to be processed
+        await sleep(5000);
+        
+        // Use NoteService to get the latest note ID
+        const { NoteService } = await import('../notes/note.service');
+        const noteService = new NoteService(this.getConfig());
+        const userNotes = await noteService.getUserNotes(1); // Get only the latest note
+        
+        if (userNotes.success && userNotes.data && userNotes.data.length > 0) {
+          const latestNoteId = userNotes.data[0].id;
+          logger.debug(`Extracted note ID from NoteService: ${latestNoteId}`);
+          return latestNoteId;
+        }
+      } catch (error) {
+        logger.warn(`Fallback note ID extraction failed: ${error}`);
+      }
+
+      logger.debug('Could not extract note ID from any method');
+      return null;
+    } catch (error) {
+      logger.warn(`Failed to extract note ID: ${error}`);
+      return null;
+    }
+  }
+
+  private async waitForVideoPublishCompletion(page: Page): Promise<string | null> {
     logger.debug('Waiting for video publish completion...');
 
     let isProcessing = false;
@@ -1026,6 +1118,9 @@ export class PublishService extends BaseService {
       isProcessing ? 5000 : VIDEO_TIMEOUTS.COMPLETION_CHECK,
       'Video publish completion timeout - could not determine result after 5 minutes'
     );
+
+    // Extract note ID after successful completion
+    return await this.extractNoteIdFromPage(page);
   }
 
   // Unified publish method for both images and videos
@@ -1066,7 +1161,7 @@ export class PublishService extends BaseService {
       const page = await this.getBrowserManager().createPage(false, browserPath, true);
 
       try {
-        await this.executeVideoPublishWorkflow(page, title, content, resolvedVideoPath, tags);
+        const noteId = await this.executeVideoPublishWorkflow(page, title, content, resolvedVideoPath, tags);
 
         // Save cookies
         await this.getBrowserManager().saveCookiesFromPage(page);
@@ -1079,6 +1174,7 @@ export class PublishService extends BaseService {
           imageCount: 0, // Videos don't have image count
           tags,
           url: this.getConfig().xhs.creatorVideoPublishUrl,
+          noteId: noteId || undefined,
         };
       } finally {
         await page.close();
@@ -1140,7 +1236,7 @@ export class PublishService extends BaseService {
     content: string,
     videoPath: string,
     tags: string
-  ): Promise<void> {
+  ): Promise<string | null> {
     // Navigate to video upload page
     await this.getBrowserManager().navigateWithRetry(
       page,
@@ -1180,7 +1276,7 @@ export class PublishService extends BaseService {
     await this.submitPost(page);
 
     // Wait for completion and check result (videos need longer timeout)
-    await this.waitForVideoPublishCompletion(page);
+    return await this.waitForVideoPublishCompletion(page);
   }
 
   private validateAndResolveVideoPath(videoPath: string): string {
