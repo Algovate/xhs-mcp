@@ -1,9 +1,3 @@
----
-noteId: "fc6dc960a32b11f0ba9895502e9a78af"
-tags: []
-
----
-
 # Examples
 
 This directory contains example images and usage demonstrations for xhs-mcp.
