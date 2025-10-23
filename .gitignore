@@ -81,3 +81,5 @@ data/
 .cursor/
 .kiro/
 .notebook/
+
+reports/

@@ -28,6 +28,7 @@
 - 发现：推荐、搜索、详情、评论
 - 用户笔记：列表查看、删除管理
 - 自动化：Puppeteer 驱动、无头模式、Cookie 管理
+- 验证：发布功能验证脚本，支持 HTML 报告生成
 
 ## 📋 可用工具
 
@@ -211,6 +212,7 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 ### 🧪 测试
 - [运行测试](./tests/README.md) - 测试说明和用法
 - 运行所有测试：`npm test`
+- **验证脚本**: `npm run validate` - 发布功能验证测试，生成 HTML 报告
 
 ## 🛠️ 构建说明
 
