@@ -20,7 +20,6 @@ export class XHSMCPServer {
   private toolHandlers: ToolHandlers;
   private resourceHandlers: ResourceHandlers;
   private config: ReturnType<typeof getConfig>;
-  private static instance: XHSMCPServer | null = null;
 
   constructor() {
     this.config = getConfig();

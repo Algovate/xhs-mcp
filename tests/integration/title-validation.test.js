@@ -8,7 +8,7 @@
  */
 
 // Import directly from source for testing
-const stringWidth = require('string-width').default || require('string-width');
+import stringWidth from 'string-width';
 
 // Inline implementation for testing
 const XHS_TITLE_CONSTRAINTS = {
@@ -65,11 +65,11 @@ function truncateTitleToWidth(title, maxWidth = 40) {
 
   for (const char of title) {
     const charWidth = stringWidth(char);
-    
+
     if (currentWidth + charWidth > maxWidth) {
       break;
     }
-    
+
     truncated += char;
     currentWidth += charWidth;
   }
@@ -110,7 +110,7 @@ function getTitleWidthBreakdown(title) {
 
 console.log('🧪 Testing Title Width Validation\n');
 console.log(`XHS Title Constraints: Max ${XHS_TITLE_CONSTRAINTS.MAX_WIDTH} units\n`);
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 // Test cases
 const testCases = [
@@ -163,11 +163,11 @@ testCases.forEach((testCase, index) => {
   console.log(`Width: ${width} units (max: ${result.maxWidth})`);
   console.log(`Remaining: ${remaining} units`);
   console.log(`Status: ${result.valid ? '✅ Valid' : '❌ Invalid'}`);
-  
+
   if (!result.valid) {
     console.log(`\n⚠️  ${result.message}`);
     console.log(`💡 ${result.suggestion}`);
-    
+
     // Show truncated version
     const truncated = truncateTitleToWidth(title);
     console.log(`\n✂️  Truncated: "${truncated}"`);

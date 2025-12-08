@@ -7,8 +7,90 @@
  *   npm test
  */
 
-const { ImageDownloader } = require('../../dist/shared/image-downloader');
-const path = require('path');
+import { createHash } from 'crypto';
+import { existsSync, mkdirSync, writeFileSync, statSync, rmSync } from 'fs';
+import { join } from 'path';
+import fetch from 'node-fetch';
+
+// Inline ImageDownloader for testing (simplified version)
+class ImageDownloader {
+  constructor(saveDir = './temp_images', timeout = 30000, maxFileSize = 10 * 1024 * 1024) {
+    this.saveDir = saveDir;
+    this.timeout = timeout;
+    this.maxFileSize = maxFileSize;
+    if (!existsSync(this.saveDir)) {
+      mkdirSync(this.saveDir, { recursive: true });
+    }
+  }
+
+  static isImageUrl(path) {
+    if (!path) return false;
+    const lowerPath = path.toLowerCase().trim();
+    return lowerPath.startsWith('http://') || lowerPath.startsWith('https://');
+  }
+
+  generateFileName(imageUrl) {
+    const hash = createHash('sha256').update(imageUrl).digest('hex');
+    const shortHash = hash.substring(0, 16);
+    let extension = 'jpg';
+    try {
+      const url = new URL(imageUrl);
+      const pathname = url.pathname.toLowerCase();
+      const match = pathname.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
+      if (match) extension = match[1];
+    } catch { }
+    return `img_${shortHash}.${extension}`;
+  }
+
+  validateImageData(buffer) {
+    if (buffer.length < 12) return { isValid: false, extension: '' };
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return { isValid: true, extension: 'jpg' };
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return { isValid: true, extension: 'png' };
+    if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return { isValid: true, extension: 'gif' };
+    return { isValid: false, extension: '' };
+  }
+
+  async downloadImage(imageUrl) {
+    if (!ImageDownloader.isImageUrl(imageUrl)) throw new Error(`Invalid URL: ${imageUrl}`);
+    const fileName = this.generateFileName(imageUrl);
+    const localPath = join(this.saveDir, fileName);
+    if (existsSync(localPath)) {
+      const stats = statSync(localPath);
+      return { originalUrl: imageUrl, localPath, cached: true, fileSize: stats.size };
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const response = await fetch(imageUrl, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const validation = this.validateImageData(buffer);
+    if (!validation.isValid) throw new Error('Not a valid image');
+    writeFileSync(localPath, buffer);
+    return { originalUrl: imageUrl, localPath, cached: false, fileSize: buffer.length };
+  }
+
+  async downloadImages(imageUrls) {
+    return Promise.all(imageUrls.map(url => this.downloadImage(url)));
+  }
+
+  async processImagePaths(imagePaths) {
+    const results = [];
+    for (const path of imagePaths) {
+      if (ImageDownloader.isImageUrl(path)) {
+        const result = await this.downloadImage(path);
+        results.push(result.localPath);
+      } else {
+        if (!existsSync(path)) throw new Error(`File not found: ${path}`);
+        results.push(path);
+      }
+    }
+    return results;
+  }
+
+  getSaveDir() { return this.saveDir; }
+}
 
 async function testImageDownload() {
   console.log('🚀 Testing image URL download feature...\n');

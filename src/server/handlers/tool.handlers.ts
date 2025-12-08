@@ -16,6 +16,27 @@ import {
   createMcpErrorResponse,
 } from '../../shared/utils';
 import { logger } from '../../shared/logger';
+import { assertTitleWidthValid } from '../../shared/title-validator';
+
+/**
+ * Tool request arguments interface
+ */
+export interface ToolRequestArgs {
+  browser_path?: string;
+  keyword?: string;
+  feed_id?: string;
+  xsec_token?: string;
+  note?: string;
+  type?: string;
+  title?: string;
+  content?: string;
+  media_paths?: string[];
+  tags?: string;
+  limit?: number;
+  cursor?: string;
+  note_id?: string;
+  last_published?: boolean;
+}
 
 export class ToolHandlers {
   private authService: AuthService;
@@ -136,10 +157,8 @@ export class ToolHandlers {
       throw new Error('Content type must be "image" or "video"');
     }
 
-    // Validate parameter constraints
-    if (title!.length > 20) {
-      throw new Error('Title must be 20 characters or less');
-    }
+    // Validate parameter constraints using width-aware title validation
+    assertTitleWidthValid(title!);
     if (content!.length > 1000) {
       throw new Error('Content must be 1000 characters or less');
     }
@@ -183,7 +202,7 @@ export class ToolHandlers {
 
   async handleToolRequest(
     name: string,
-    args: any
+    args: ToolRequestArgs = {}
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       switch (name) {
