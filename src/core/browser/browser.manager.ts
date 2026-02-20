@@ -110,7 +110,7 @@ export class BrowserManager {
   }
 
   private async launchBrowser(headless?: boolean, executablePath?: string): Promise<Browser> {
-    const isHeadless = headless !== undefined ? headless : this.config.browser.headlessDefault;
+    const isHeadless = false; // temporarily disable headless mode for debugging
 
     try {
       const launchOptions: any = {
