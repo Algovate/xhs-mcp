@@ -129,17 +129,29 @@ export abstract class PublishBaseService extends BaseService {
   }
 
   protected async fillTitle(page: Page, title: string): Promise<void> {
+    // Wait for a likely title input to appear
+    try {
+      await page.waitForSelector(
+        'input.c-input_inner, input.c-input, input[placeholder*="标题"], .title-input input, input[class*="title"]',
+        { timeout: 10000 }
+      );
+    } catch (error) {
+      // Continue without waiting if not found purely by selector
+    }
+
     const titleSelectors = [
+      'input.c-input_inner', // specific for recent Xiaohongshu creator UI
+      'input.c-input',
       'input[placeholder*="标题"]',
+      'input[placeholder*="填写标题会有更多赞哦"]',
       'input[placeholder*="title"]',
       'input[data-placeholder*="标题"]',
       '.title-input input',
-      'input[type="text"]',
       'input[placeholder*="请输入标题"]',
-      'input[placeholder*="标题"]',
       'input[name="title"]',
       'input[id*="title"]',
       'input[class*="title"]',
+      'input[type="text"]', // Fallbacks
       'div[contenteditable="true"]',
       'textarea[placeholder*="标题"]',
       'textarea[placeholder*="title"]',
@@ -149,11 +161,24 @@ export abstract class PublishBaseService extends BaseService {
       try {
         const titleInput = await page.$(selector);
         if (titleInput) {
+          // Scroll into view just in case it's off screen
+          await page.evaluate((el) => {
+            if (el && typeof el.scrollIntoView === 'function') {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, titleInput);
+          await sleep(500);
+
           const isVisible = await titleInput.isIntersectingViewport();
 
           if (isVisible) {
             await titleInput.click();
             await sleep(500); // Wait for focus
+
+            // clear existing input if any
+            await titleInput.click({ clickCount: 3 });
+            await titleInput.press('Backspace');
+
             await titleInput.type(title);
             return;
           }
@@ -163,21 +188,37 @@ export abstract class PublishBaseService extends BaseService {
       }
     }
 
-    // If no input found, try to find any input or textarea on the page
+    // If no specific input found, try to find any visible input or textarea on the page
     try {
-      const allInputs = await page.$$('input, textarea, [contenteditable="true"]');
+      const allInputs = await page.$$('input, textarea');
 
       for (let i = 0; i < allInputs.length; i++) {
         const input = allInputs[i];
         try {
-          const isVisible = await input.isIntersectingViewport();
-          const tagName = await page.evaluate((el) => el.tagName, input);
+          const type = await page.evaluate((el) => el.getAttribute('type'), input);
 
-          if (isVisible && (tagName === 'INPUT' || tagName === 'TEXTAREA')) {
-            await input.click();
+          // avoid file inputs or hidden inputs
+          if (type !== 'file' && type !== 'hidden') {
+            await page.evaluate((el) => {
+              if (el && typeof el.scrollIntoView === 'function') {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, input);
             await sleep(500);
-            await input.type(title);
-            return;
+
+            const isVisible = await input.isIntersectingViewport();
+
+            if (isVisible) {
+              await input.click();
+              await sleep(500);
+
+              // clear existing input if any
+              await input.click({ clickCount: 3 });
+              await input.press('Backspace');
+
+              await input.type(title);
+              return;
+            }
           }
         } catch (error) {
           // Continue to next input
