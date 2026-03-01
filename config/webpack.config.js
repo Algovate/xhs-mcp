@@ -25,7 +25,8 @@ const config = {
   // Output configuration
   output: {
     path: resolve(__dirname, '../dist'),
-    filename: '[name].js',
+    filename: '[name].cjs',
+    chunkFilename: '[name].cjs',
     library: {
       type: 'commonjs2',
     },

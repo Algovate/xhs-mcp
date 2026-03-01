@@ -2,7 +2,7 @@ const { execSync } = require('child_process');
 const path = require('path');
 
 // Get the path to the CLI executable
-const cliPath = path.resolve(__dirname, '../../dist/xhs-mcp.js');
+const cliPath = path.resolve(__dirname, '../../dist/xhs-mcp.cjs');
 
 // 3 test images created from the fixture
 const images = [

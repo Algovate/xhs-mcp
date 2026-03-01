@@ -219,7 +219,7 @@ npx xhs-mcp mcp [--mode stdio|http] [--port 3000]
 - 统一使用单一生产构建配置：`config/webpack.config.js`
 - 已移除开发与优化变体；开发请直接运行：
   - `npm run dev`（直接运行 TypeScript CLI）
-  - `npm run build`（打包到 `dist/xhs-mcp.js`）
+  - `npm run build`（打包到 `dist/xhs-mcp.cjs`）
 
 ## 🙏 致谢
 

@@ -156,7 +156,7 @@ npx xhs-mcp mcp --mode http --port 3000
 - Development and optimized variants have been removed.
 - For development:
   - `npm run dev` (run TypeScript CLI directly)
-  - `npm run build` (bundle to `dist/xhs-mcp.js`)
+  - `npm run build` (bundle to `dist/xhs-mcp.cjs`)
 
 ### 🎨 Examples
 - [Examples](./examples/README.md) - Image and publishing examples
