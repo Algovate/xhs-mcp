@@ -16,7 +16,7 @@ const __dirname = dirname(__filename);
 const config = {
   // Target Node.js environment
   target: 'node18',
-  
+
   // Entry point - only CLI
   entry: {
     'xhs-mcp': resolve(__dirname, '../src/cli/cli.ts'),
@@ -131,7 +131,7 @@ const config = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     }),
-    
+
     // Ignore optional dependencies that might cause issues
     new webpack.IgnorePlugin({
       resourceRegExp: /^(canvas|sqlite3|node-gyp|node-pre-gyp)$/,
@@ -167,7 +167,7 @@ const config = {
         extractComments: false,
       }),
     ],
-    
+
     // Split chunks for better caching (minimal for CLI)
     splitChunks: {
       chunks: 'all',
