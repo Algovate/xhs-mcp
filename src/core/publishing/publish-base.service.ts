@@ -3,15 +3,13 @@
  */
 
 import { Page } from 'puppeteer';
-import { Config, PublishResult } from '../../shared/types';
-import { PublishError, InvalidImageError } from '../../shared/errors';
+import { Config } from '../../shared/types';
+import { PublishError } from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
-import { existsSync, statSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { BrowserManager } from '../browser/browser.manager';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 import { ImageDownloader } from '../../shared/image-downloader';
-import { assertTitleWidthValid, getTitleWidth } from '../../shared/title-validator';
 import { COMMON_STATUS_SELECTORS, COMMON_TEXT_PATTERNS, COMMON_FILE_SELECTORS } from '../../shared/selectors';
 
 // Constants for video publishing
@@ -56,8 +54,8 @@ export const TEXT_PATTERNS = COMMON_TEXT_PATTERNS;
 export abstract class PublishBaseService extends BaseService {
   protected imageDownloader: ImageDownloader;
 
-  constructor(config: Config) {
-    super(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
     this.imageDownloader = new ImageDownloader('./temp_images');
   }
 
@@ -496,21 +494,19 @@ export abstract class PublishBaseService extends BaseService {
 
   protected async submitPost(page: Page): Promise<void> {
     try {
-      // Find the submit button by text "发布"
       const buttons = await page.$$('button');
-      let submitButton = null;
+      let submitButton: import('puppeteer').ElementHandle<HTMLButtonElement> | null = null;
       for (const btn of buttons) {
         const text = await btn.evaluate(el => el.textContent?.trim());
         if (text === '发布') {
-          submitButton = btn;
+          submitButton = btn as import('puppeteer').ElementHandle<HTMLButtonElement>;
           break;
         }
       }
 
       if (!submitButton) {
-        // Try span or div as fallback
         const submitSelector = 'div.submit, .submit-btn, .publish-btn';
-        submitButton = await page.$(submitSelector);
+        submitButton = await page.$(submitSelector) as import('puppeteer').ElementHandle<HTMLButtonElement> | null;
         if (!submitButton) {
           throw new PublishError('Could not find submit button');
         }
@@ -702,33 +698,6 @@ export abstract class PublishBaseService extends BaseService {
     } catch (error) {
       logger.warn(`Failed to extract note ID: ${error}`);
       return null;
-    }
-  }
-
-  protected validateContentInputs(
-    type: 'image' | 'video',
-    title: string,
-    content: string,
-    mediaPaths: string[]
-  ): void {
-    if (!title?.trim()) {
-      throw new PublishError(`${type === 'image' ? 'Image' : 'Video'} title cannot be empty`);
-    }
-
-    if (!content?.trim()) {
-      throw new PublishError(`${type === 'image' ? 'Image' : 'Video'} content cannot be empty`);
-    }
-
-    if (!mediaPaths || mediaPaths.length === 0) {
-      throw new PublishError(`${type === 'image' ? 'Image' : 'Video'} paths are required`);
-    }
-
-    if (type === 'image' && mediaPaths.length > 18) {
-      throw new PublishError('Maximum 18 images allowed for image posts');
-    }
-
-    if (type === 'video' && mediaPaths.length !== 1) {
-      throw new PublishError('Video publishing requires exactly one video file');
     }
   }
 }

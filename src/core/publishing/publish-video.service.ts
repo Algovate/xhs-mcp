@@ -205,7 +205,10 @@ export class VideoPublishService extends PublishBaseService {
   }
 
   private validateAndResolveVideoPath(videoPath: string): string {
-    const resolvedPath = join(process.cwd(), videoPath);
+    const resolvedPath =
+      videoPath.startsWith('/') || videoPath.match(/^[a-zA-Z]:/)
+        ? videoPath
+        : join(process.cwd(), videoPath);
 
     if (!existsSync(resolvedPath)) {
       throw new PublishError(`Video file not found: ${videoPath}`);

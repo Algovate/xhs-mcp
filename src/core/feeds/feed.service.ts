@@ -18,6 +18,7 @@ import {
   XHSError,
 } from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
+import { BrowserManager } from '../browser/browser.manager';
 import {
   makeSearchUrl,
   makeFeedDetailUrl,
@@ -28,8 +29,8 @@ import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
 
 export class FeedService extends BaseService {
-  constructor(config: Config) {
-    super(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
   }
 
   async getFeedList(browserPath?: string): Promise<FeedListResult> {

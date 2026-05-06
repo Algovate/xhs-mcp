@@ -6,11 +6,11 @@ import { AuthService } from '../../core/auth/auth.service';
 import { FeedService } from '../../core/feeds/feed.service';
 import { PublishService } from '../../core/publishing/publish.service';
 import { NoteService } from '../../core/notes/note.service';
+import { BrowserManager } from '../../core/browser/browser.manager';
 import { getConfig } from '../../shared/config';
 import { XHSError } from '../../shared/errors';
 import {
   validateRequiredParams,
-  validatePublishNoteParams,
   safeErrorHandler,
   createMcpToolResponse,
   createMcpErrorResponse,
@@ -43,13 +43,15 @@ export class ToolHandlers {
   private feedService: FeedService;
   private publishService: PublishService;
   private noteService: NoteService;
+  private browserManager: BrowserManager;
 
   constructor() {
     const config = getConfig();
-    this.authService = new AuthService(config);
-    this.feedService = new FeedService(config);
-    this.publishService = new PublishService(config);
-    this.noteService = new NoteService(config);
+    this.browserManager = new BrowserManager(config);
+    this.authService = new AuthService(config, this.browserManager);
+    this.feedService = new FeedService(config, this.browserManager);
+    this.publishService = new PublishService(config, this.browserManager);
+    this.noteService = new NoteService(config, this.browserManager);
   }
 
   async handleAuthLogin(

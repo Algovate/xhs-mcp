@@ -193,7 +193,6 @@ export function createMcpErrorResponse(error: unknown): {
           success: false,
           error: 'UnknownError',
           message: error.message,
-          stack: error.stack,
         }
       : {
           success: false,

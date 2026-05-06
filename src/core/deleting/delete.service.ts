@@ -5,9 +5,11 @@
 
 import type { Config, XHSResponse } from '../../shared/types';
 import { BaseService } from '../../shared/base.service';
+import { BrowserManager } from '../browser/browser.manager';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
-import { DeleteError, NotLoggedInError } from '../../shared/errors';
+import { DeleteError } from '../../shared/errors';
+import { navigateToCreatorCenter, verifyCreatorAuth } from '../../shared/creator-center';
 import { Page } from 'puppeteer';
 import { COMMON_BUTTON_SELECTORS, COMMON_MODAL_SELECTORS } from '../../shared/selectors';
 
@@ -50,8 +52,8 @@ const DELETE_SELECTORS = {
 } as const;
 
 export class DeleteService extends BaseService {
-  constructor(config: Config) {
-    super(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
   }
 
   /**
@@ -67,8 +69,8 @@ export class DeleteService extends BaseService {
 
     try {
       // Navigate to creator center note manager
-      await this.navigateToCreatorCenter(page);
-      await this.verifyUserAuthentication(page);
+      await navigateToCreatorCenter(page);
+      await verifyCreatorAuth(page, this.getConfig().xhs.loginOkSelector);
 
       // Find and delete the specific note
       const result = await this.findAndDeleteNote(page, noteId);
@@ -107,8 +109,8 @@ export class DeleteService extends BaseService {
 
     try {
       // Navigate to creator center note manager
-      await this.navigateToCreatorCenter(page);
-      await this.verifyUserAuthentication(page);
+      await navigateToCreatorCenter(page);
+      await verifyCreatorAuth(page, this.getConfig().xhs.loginOkSelector);
 
       // Find and delete the last published note
       const result = await this.findAndDeleteLastNote(page);
@@ -147,95 +149,13 @@ export class DeleteService extends BaseService {
   }
 
   /**
-   * Navigate to creator center note manager
-   */
-  private async navigateToCreatorCenter(page: Page): Promise<void> {
-    try {
-      const creatorCenterUrl = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
-      await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
-      await sleep(5000); // Wait longer for page to load completely
-
-      // Debug: Log page content to understand the structure
-      const pageContent = await page.evaluate(() => {
-        const noteElements = document.querySelectorAll('div.note, [class*="note"], [data-impression]');
-        const allButtons = document.querySelectorAll('button, [role="button"], .btn, [class*="button"]');
-        const allLinks = document.querySelectorAll('a[href*="/explore/"]');
-
-        return {
-          totalNoteElements: noteElements.length,
-          noteElementClasses: Array.from(noteElements).map(el => el.className),
-          totalButtons: allButtons.length,
-          buttonTexts: Array.from(allButtons).slice(0, 10).map(btn => btn.textContent?.trim()).filter(Boolean),
-          buttonClasses: Array.from(allButtons).slice(0, 10).map(btn => btn.className),
-          exploreLinks: Array.from(allLinks).map(link => link.getAttribute('href')),
-          pageTitle: document.title,
-          currentUrl: window.location.href
-        };
-      });
-
-      logger.info(`Page loaded: ${JSON.stringify(pageContent, null, 2)}`);
-    } catch (error) {
-      throw new DeleteError(
-        'Failed to navigate to creator center',
-        { url: 'https://creator.xiaohongshu.com/new/note-manager?source=official' },
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
-  }
-
-  /**
-   * Verify user is authenticated
-   */
-  private async verifyUserAuthentication(page: Page): Promise<void> {
-    try {
-      // Check for login elements on the current page
-      const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
-
-      // Also check for creator center specific elements
-      const creatorElements = await page.$$(
-        '[class*="user"], [class*="profile"], [class*="avatar"]'
-      );
-
-      if (loginElements.length === 0 && creatorElements.length === 0) {
-        // Check if we're on a login page
-        const currentUrl = page.url();
-        if (currentUrl.includes('login') || currentUrl.includes('signin')) {
-          throw new NotLoggedInError('User not logged in', {
-            operation: 'deleteNote',
-            url: currentUrl,
-          });
-        }
-
-        // For creator center, check if we can see note management elements
-        const noteElements = await page.$$('div.note');
-        if (noteElements.length === 0) {
-          throw new NotLoggedInError('User not logged in or no notes found', {
-            operation: 'deleteNote',
-            url: currentUrl,
-          });
-        }
-      }
-    } catch (error) {
-      if (error instanceof NotLoggedInError) {
-        throw error;
-      }
-      throw new DeleteError(
-        'Failed to verify authentication',
-        { operation: 'verifyAuth' },
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
-  }
-
-  /**
    * Find and delete a specific note by ID
    */
   private async findAndDeleteNote(page: Page, noteId: string): Promise<{ noteId: string; title: string }> {
     try {
+      // Step 1: Locate the note and try to find a direct delete button or more-options button
       const result = await page.evaluate(
         (selectors: typeof DELETE_SELECTORS, targetNoteId: string) => {
-
-          // Try each note item selector
           let noteElements: Element[] = [];
           for (const selector of selectors.NOTE_ITEM) {
             const elements = Array.from(document.querySelectorAll(selector));
@@ -250,7 +170,6 @@ export class DeleteService extends BaseService {
           }
 
           for (const noteElement of noteElements) {
-            // Check if this is the note we want to delete
             const impressionData = noteElement.getAttribute('data-impression');
             let currentNoteId = '';
 
@@ -258,12 +177,11 @@ export class DeleteService extends BaseService {
               try {
                 const parsed = JSON.parse(impressionData);
                 currentNoteId = parsed?.noteTarget?.value?.noteId || '';
-              } catch (e) {
+              } catch {
                 // Ignore parsing errors
               }
             }
 
-            // Also try to find note ID in other attributes or data
             if (!currentNoteId) {
               const linkElement = noteElement.querySelector('a[href*="/explore/"], a[href*="/note/"]');
               if (linkElement) {
@@ -276,58 +194,28 @@ export class DeleteService extends BaseService {
             }
 
             if (currentNoteId === targetNoteId) {
-              // Found the target note, try to delete it
               const titleElement = noteElement.querySelector('[class*="title"], [class*="name"]');
               const title = titleElement?.textContent?.trim() || 'Unknown';
 
-              // Look for delete button or more options button
-              let deleteButton: Element | null = null;
-
-              // Try each delete button selector
+              // Try to find a direct delete button first
               for (const selector of selectors.DELETE_BUTTON) {
-                deleteButton = noteElement.querySelector(selector);
+                const deleteButton = noteElement.querySelector(selector);
                 if (deleteButton) {
-                  break;
+                  (deleteButton as HTMLElement).click();
+                  return { noteId: currentNoteId, title, found: true, needsDropdown: false };
                 }
               }
 
-              if (!deleteButton) {
-                // Try to find more options button first
-                let moreButton: Element | null = null;
-                for (const selector of selectors.MORE_OPTIONS) {
-                  moreButton = noteElement.querySelector(selector);
-                  if (moreButton) {
-                    break;
-                  }
-                }
-
+              // No direct delete button — check for a more-options button
+              for (const selector of selectors.MORE_OPTIONS) {
+                const moreButton = noteElement.querySelector(selector);
                 if (moreButton) {
                   (moreButton as HTMLElement).click();
-
-                  // Wait for dropdown to appear and look for delete option
-                  setTimeout(() => {
-                    for (const selector of selectors.DROPDOWN_MENU) {
-                      const dropdown = document.querySelector(selector);
-                      if (dropdown) {
-                        for (const deleteSelector of selectors.DELETE_BUTTON) {
-                          deleteButton = dropdown.querySelector(deleteSelector);
-                          if (deleteButton) {
-                            break;
-                          }
-                        }
-                        if (deleteButton) break;
-                      }
-                    }
-                  }, 1000);
+                  return { noteId: currentNoteId, title, found: true, needsDropdown: true };
                 }
               }
 
-              if (deleteButton) {
-                (deleteButton as HTMLElement).click();
-                return { noteId: currentNoteId, title, found: true };
-              } else {
-                return { noteId: currentNoteId, title, found: false, error: 'Delete button not found' };
-              }
+              return { noteId: currentNoteId, title, found: false, error: 'Delete button not found' };
             }
           }
 
@@ -341,10 +229,30 @@ export class DeleteService extends BaseService {
         throw new DeleteError(result.error || 'Note not found', { noteId });
       }
 
-      // Wait for confirmation dialog if it appears
-      await sleep(1000);
+      // Step 2: If we clicked "more options", wait for dropdown then click delete in it
+      if (result.needsDropdown) {
+        await sleep(1000);
+        let clicked = false;
+        for (const selector of DELETE_SELECTORS.DROPDOWN_MENU) {
+          const dropdown = await page.$(selector);
+          if (dropdown) {
+            for (const deleteSelector of DELETE_SELECTORS.DELETE_BUTTON) {
+              const deleteBtn = await dropdown.$(deleteSelector);
+              if (deleteBtn) {
+                await deleteBtn.click();
+                clicked = true;
+                break;
+              }
+            }
+            if (clicked) break;
+          }
+        }
+        if (!clicked) {
+          throw new DeleteError('Delete button not found in dropdown menu', { noteId });
+        }
+      }
 
-      // Handle confirmation dialog
+      await sleep(1000);
       await this.handleConfirmationDialog(page);
 
       return { noteId: result.noteId, title: result.title };
@@ -410,58 +318,52 @@ export class DeleteService extends BaseService {
         const titleElement = firstNote.querySelector('[class*="title"], [class*="name"]');
         const title = titleElement?.textContent?.trim() || 'Unknown';
 
-        // Look for delete button or more options button
-        let deleteButton: Element | null = null;
-
-        // Try each delete button selector
+        // Try to find a direct delete button first
         for (const selector of selectors.DELETE_BUTTON) {
-          deleteButton = firstNote.querySelector(selector);
+          const deleteButton = firstNote.querySelector(selector);
           if (deleteButton) {
-            break;
+            (deleteButton as HTMLElement).click();
+            return { noteId, title, found: true, needsDropdown: false };
           }
         }
 
-        if (!deleteButton) {
-          // Try to find more options button first
-          let moreButton: Element | null = null;
-          for (const selector of selectors.MORE_OPTIONS) {
-            moreButton = firstNote.querySelector(selector);
-            if (moreButton) {
-              break;
-            }
-          }
-
+        // No direct delete button — check for a more-options button
+        for (const selector of selectors.MORE_OPTIONS) {
+          const moreButton = firstNote.querySelector(selector);
           if (moreButton) {
             (moreButton as HTMLElement).click();
-
-            // Wait for dropdown to appear and look for delete option
-            setTimeout(() => {
-              for (const selector of selectors.DROPDOWN_MENU) {
-                const dropdown = document.querySelector(selector);
-                if (dropdown) {
-                  for (const deleteSelector of selectors.DELETE_BUTTON) {
-                    deleteButton = dropdown.querySelector(deleteSelector);
-                    if (deleteButton) {
-                      break;
-                    }
-                  }
-                  if (deleteButton) break;
-                }
-              }
-            }, 1000);
+            return { noteId, title, found: true, needsDropdown: true };
           }
         }
 
-        if (deleteButton) {
-          (deleteButton as HTMLElement).click();
-          return { noteId, title, found: true };
-        } else {
-          return { noteId, title, found: false, error: 'Delete button not found' };
-        }
+        return { noteId, title, found: false, error: 'Delete button not found' };
       }, DELETE_SELECTORS);
 
       if (!result.found) {
         throw new DeleteError(result.error || 'Failed to find delete button', {});
+      }
+
+      // If we clicked "more options", wait for dropdown then click delete in it
+      if (result.needsDropdown) {
+        await sleep(1000);
+        let clicked = false;
+        for (const selector of DELETE_SELECTORS.DROPDOWN_MENU) {
+          const dropdown = await page.$(selector);
+          if (dropdown) {
+            for (const deleteSelector of DELETE_SELECTORS.DELETE_BUTTON) {
+              const deleteBtn = await dropdown.$(deleteSelector);
+              if (deleteBtn) {
+                await deleteBtn.click();
+                clicked = true;
+                break;
+              }
+            }
+            if (clicked) break;
+          }
+        }
+        if (!clicked) {
+          throw new DeleteError('Delete button not found in dropdown menu', {});
+        }
       }
 
       // Wait for confirmation dialog if it appears
@@ -489,7 +391,7 @@ export class DeleteService extends BaseService {
       await sleep(2000);
 
       // Look for confirmation buttons using all possible selectors
-      let confirmButton = null;
+      let confirmButton: import('puppeteer').ElementHandle<Element> | null = null;
 
       // Try each confirm button selector
       for (const selector of DELETE_SELECTORS.CONFIRM_BUTTON) {

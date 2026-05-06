@@ -5,9 +5,10 @@
 
 import type { Config, XHSResponse } from '../../shared/types';
 import { BaseService } from '../../shared/base.service';
+import { BrowserManager } from '../browser/browser.manager';
 import { logger } from '../../shared/logger';
-import { sleep } from '../../shared/utils';
-import { ProfileError, NoteParsingError, NotLoggedInError } from '../../shared/errors';
+import { NoteParsingError } from '../../shared/errors';
+import { navigateToCreatorCenter, verifyCreatorAuth } from '../../shared/creator-center';
 import { DeleteService, DeleteResult } from '../deleting/delete.service';
 import { Page } from 'puppeteer';
 
@@ -70,9 +71,9 @@ const NOTE_SELECTORS = {
 export class NoteService extends BaseService {
   private deleteService: DeleteService;
 
-  constructor(config: Config) {
-    super(config);
-    this.deleteService = new DeleteService(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
+    this.deleteService = new DeleteService(config, this.browserManager);
   }
 
   /**
@@ -93,8 +94,8 @@ export class NoteService extends BaseService {
 
     try {
       // Navigate to creator center note manager
-      await this.navigateToCreatorCenter(page);
-      await this.verifyUserAuthentication(page);
+      await navigateToCreatorCenter(page);
+      await verifyCreatorAuth(page, this.getConfig().xhs.loginOkSelector);
 
       // Extract notes from creator center
       const notesData = await this.extractNotesFromCreatorCenter(page);
@@ -132,67 +133,6 @@ export class NoteService extends BaseService {
     }
     if (limit > 100) {
       throw new NoteParsingError('Limit cannot exceed 100', { limit });
-    }
-  }
-
-  /**
-   * Navigate to creator center note manager
-   */
-  private async navigateToCreatorCenter(page: Page): Promise<void> {
-    try {
-      const creatorCenterUrl = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
-      await this.getBrowserManager().navigateWithRetry(page, creatorCenterUrl);
-      await sleep(3000); // Wait for page to load completely
-    } catch (error) {
-      throw new NoteParsingError(
-        'Failed to navigate to creator center',
-        { url: 'https://creator.xiaohongshu.com/new/note-manager?source=official' },
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
-  }
-
-  /**
-   * Verify user is authenticated
-   */
-  private async verifyUserAuthentication(page: Page): Promise<void> {
-    try {
-      // Check for login elements on the current page
-      const loginElements = await page.$$(this.getConfig().xhs.loginOkSelector);
-
-      // Also check for creator center specific elements
-      const creatorElements = await page.$$(
-        '[class*="user"], [class*="profile"], [class*="avatar"]'
-      );
-
-      if (loginElements.length === 0 && creatorElements.length === 0) {
-        // Check if we're on a login page
-        const currentUrl = page.url();
-        if (currentUrl.includes('login') || currentUrl.includes('signin')) {
-          throw new NotLoggedInError('User not logged in', {
-            operation: 'getUserNotes',
-            url: currentUrl,
-          });
-        }
-
-        // For creator center, check if we can see note management elements
-        const noteElements = await page.$$('div.note');
-        if (noteElements.length === 0) {
-          throw new NotLoggedInError('User not logged in or no notes found', {
-            operation: 'getUserNotes',
-            url: currentUrl,
-          });
-        }
-      }
-    } catch (error) {
-      if (error instanceof NotLoggedInError) {
-        throw error;
-      }
-      throw new NoteParsingError(
-        'Failed to verify authentication',
-        { operation: 'verifyAuth' },
-        error instanceof Error ? error : new Error(String(error))
-      );
     }
   }
 

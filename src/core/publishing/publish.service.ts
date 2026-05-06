@@ -1,6 +1,6 @@
-import { Page } from 'puppeteer';
 import { Config, PublishResult } from '../../shared/types';
 import { BaseService } from '../../shared/base.service';
+import { BrowserManager } from '../browser/browser.manager';
 import { ImagePublishService } from './publish-image.service';
 import { VideoPublishService } from './publish-video.service';
 
@@ -8,10 +8,10 @@ export class PublishService extends BaseService {
   private imageService: ImagePublishService;
   private videoService: VideoPublishService;
 
-  constructor(config: Config) {
-    super(config);
-    this.imageService = new ImagePublishService(config);
-    this.videoService = new VideoPublishService(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
+    this.imageService = new ImagePublishService(config, this.browserManager);
+    this.videoService = new VideoPublishService(config, this.browserManager);
   }
 
   public async publishNote(

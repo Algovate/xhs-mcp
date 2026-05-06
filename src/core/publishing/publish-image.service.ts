@@ -4,7 +4,7 @@ import { PublishResult } from '../../shared/types';
 import { PublishError, InvalidImageError } from '../../shared/errors';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
-import { existsSync, statSync, writeFileSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import { join } from 'path';
 import { PublishBaseService } from './publish-base.service';
 

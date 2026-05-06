@@ -10,6 +10,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { getConfig } from '../shared/config';
+import { logger } from '../shared/logger';
 import { ToolHandlers } from './handlers/tool.handlers';
 import { ResourceHandlers } from './handlers/resource.handlers';
 import { XHS_TOOL_SCHEMAS, XHS_RESOURCE_SCHEMAS } from './schemas/tool.schemas';
@@ -72,7 +73,7 @@ export class XHSHTTPMCPServer {
   }
 
   private async handleStreamableHTTP(req: express.Request, res: express.Response): Promise<void> {
-    console.log(`Received ${req.method} request to /mcp`);
+    logger.info(`Received ${req.method} request to /mcp`);
 
     try {
       // Check for existing session ID
@@ -99,11 +100,11 @@ export class XHSHTTPMCPServer {
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: (): string => randomUUID(),
           onsessioninitialized: (sessionId: string): void => {
-            console.log(`StreamableHTTP session initialized with ID: ${sessionId}`);
+            logger.info(`StreamableHTTP session initialized with ID: ${sessionId}`);
             this.transports.set(sessionId, transport!);
           },
           onsessionclosed: (sessionId: string): void => {
-            console.log(`StreamableHTTP session closed: ${sessionId}`);
+            logger.info(`StreamableHTTP session closed: ${sessionId}`);
             this.transports.delete(sessionId);
           },
         });
@@ -112,7 +113,7 @@ export class XHSHTTPMCPServer {
         transport.onclose = (): void => {
           const sid = transport!.sessionId;
           if (sid && this.transports.has(sid)) {
-            console.log(`Transport closed for session ${sid}, removing from transports map`);
+            logger.info(`Transport closed for session ${sid}, removing from transports map`);
             this.transports.delete(sid);
           }
         };
@@ -136,7 +137,7 @@ export class XHSHTTPMCPServer {
       // Handle the request with the transport
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
-      console.error('Error handling Streamable HTTP request:', error);
+      logger.error('Error handling Streamable HTTP request:', error);
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
@@ -151,7 +152,7 @@ export class XHSHTTPMCPServer {
   }
 
   private async handleSSEConnection(req: express.Request, res: express.Response): Promise<void> {
-    console.log('Received GET request to /sse (deprecated SSE transport)');
+    logger.info('Received GET request to /sse (deprecated SSE transport)');
 
     try {
       const transport = new SSEServerTransport('/messages', res);
@@ -164,7 +165,7 @@ export class XHSHTTPMCPServer {
       const server = this.createMCPServer();
       await server.connect(transport);
     } catch (error) {
-      console.error('Error handling SSE connection:', error);
+      logger.error('Error handling SSE connection:', error);
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
@@ -198,7 +199,7 @@ export class XHSHTTPMCPServer {
 
       await transport.handlePostMessage(req, res, req.body);
     } catch (error) {
-      console.error('Error handling SSE message:', error);
+      logger.error('Error handling SSE message:', error);
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
@@ -257,7 +258,7 @@ export class XHSHTTPMCPServer {
     return new Promise((resolve, reject) => {
       const server = this.app.listen(this.port, (error?: Error) => {
         if (error) {
-          console.error('Failed to start HTTP server:', error);
+          logger.error('Failed to start HTTP server:', error);
           reject(error);
           return;
         }
@@ -293,41 +294,39 @@ SUPPORTED TRANSPORT OPTIONS:
 
       // Handle server shutdown
       process.on('SIGINT', async () => {
-        console.log('Shutting down HTTP server...');
+        logger.info('Shutting down HTTP server...');
 
-        // Close all active transports to properly clean up resources
         for (const [sessionId, transport] of this.transports) {
           try {
-            console.log(`Closing transport for session ${sessionId}`);
+            logger.info(`Closing transport for session ${sessionId}`);
             await transport.close();
           } catch (error) {
-            console.error(`Error closing transport for session ${sessionId}:`, error);
+            logger.error(`Error closing transport for session ${sessionId}:`, error);
           }
         }
 
         this.transports.clear();
         server.close(() => {
-          console.log('HTTP server shutdown complete');
+          logger.info('HTTP server shutdown complete');
           process.exit(0);
         });
       });
 
       process.on('SIGTERM', async () => {
-        console.log('Shutting down HTTP server...');
+        logger.info('Shutting down HTTP server...');
 
-        // Close all active transports to properly clean up resources
         for (const [sessionId, transport] of this.transports) {
           try {
-            console.log(`Closing transport for session ${sessionId}`);
+            logger.info(`Closing transport for session ${sessionId}`);
             await transport.close();
           } catch (error) {
-            console.error(`Error closing transport for session ${sessionId}:`, error);
+            logger.error(`Error closing transport for session ${sessionId}:`, error);
           }
         }
 
         this.transports.clear();
         server.close(() => {
-          console.log('HTTP server shutdown complete');
+          logger.info('HTTP server shutdown complete');
           process.exit(0);
         });
       });
@@ -340,7 +339,7 @@ SUPPORTED TRANSPORT OPTIONS:
       try {
         await transport.close();
       } catch (error) {
-        console.error(`Error closing transport for session ${sessionId}:`, error);
+        logger.error(`Error closing transport for session ${sessionId}:`, error);
       }
     }
     this.transports.clear();

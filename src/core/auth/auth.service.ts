@@ -6,18 +6,49 @@ import { Config, LoginResult, StatusResult } from '../../shared/types';
 import {
   LoginTimeoutError,
   LoginFailedError,
-  NotLoggedInError,
   XHSError,
 } from '../../shared/errors';
 import { BaseService } from '../../shared/base.service';
-import { deleteCookiesFile, getCookiesInfo } from '../../shared/cookies';
+import { BrowserManager } from '../browser/browser.manager';
+import { deleteCookiesFile } from '../../shared/cookies';
 import { isLoggedIn, getLoginStatusWithProfile } from '../../shared/xhs.utils';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
+import { Page } from 'puppeteer';
 
 export class AuthService extends BaseService {
-  constructor(config: Config) {
-    super(config);
+  constructor(config: Config, browserManager?: BrowserManager) {
+    super(config, browserManager);
+  }
+
+  /**
+   * Extract profile URL and user ID from the current page
+   */
+  private async extractProfileFromPage(page: Page): Promise<Record<string, string> | undefined> {
+    try {
+      const profileUrl = await page.evaluate(() => {
+        const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
+        const currentUserLink = userLinks.find((link) => {
+          const text = link.textContent?.trim();
+          return (
+            text === '我' ||
+            (text && text.includes('profile')) ||
+            (text && text.includes('用户'))
+          );
+        });
+        return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
+      });
+
+      if (profileUrl) {
+        const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
+        if (userIdMatch) {
+          return { userId: userIdMatch[1], profileUrl };
+        }
+      }
+    } catch (profileError) {
+      logger.warn('Failed to get profile information:', profileError);
+    }
+    return undefined;
   }
 
   async login(browserPath?: string, timeout: number = 300): Promise<LoginResult> {
@@ -30,42 +61,13 @@ export class AuthService extends BaseService {
 
         // Check if already logged in
         if (await isLoggedIn(page)) {
-          // Get profile information if already logged in
           let profile: any = undefined;
           try {
-            // Find current user's profile link and extract user ID from URL
-            const profileUrl = await page.evaluate(() => {
-              const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-              const currentUserLink = userLinks.find((link) => {
-                const text = link.textContent?.trim();
-                return (
-                  text === '我' ||
-                  (text && text.includes('profile')) ||
-                  (text && text.includes('用户'))
-                );
-              });
-              return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
-            });
-
-            if (profileUrl) {
-              // Extract user ID from profile URL
-              const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
-              if (userIdMatch) {
-                profile = {
-                  userId: userIdMatch[1],
-                  profileUrl: profileUrl,
-                };
-              }
-            }
-
-            // Also try to get additional profile info from current page
+            const extracted = await this.extractProfileFromPage(page);
             const loginStatus = await getLoginStatusWithProfile(page);
-            if (loginStatus.profile) {
-              profile = { ...profile, ...loginStatus.profile };
-            }
+            profile = { ...extracted, ...loginStatus.profile };
           } catch (profileError) {
             logger.warn('Failed to get profile information:', profileError);
-            // Continue without profile info
           }
 
           return {
@@ -78,24 +80,19 @@ export class AuthService extends BaseService {
         }
 
         // Wait for login completion
-        const checkInterval = 5; // Check every 5 seconds
+        const checkInterval = 5;
         const maxChecks = timeout / checkInterval;
 
         for (let checkCount = 0; checkCount < maxChecks; checkCount++) {
           try {
-            // Check if login completed with short timeout
             await page.waitForSelector(this.getConfig().xhs.loginOkSelector, {
               timeout: checkInterval * 1000,
             });
-            // Login completed successfully
             break;
           } catch (error) {
-            // Login not yet complete, continue checking
             const elapsed = (checkCount + 1) * checkInterval;
-            const remaining = timeout - elapsed;
 
             if (checkCount === maxChecks - 1) {
-              // Final timeout reached
               throw new LoginTimeoutError(
                 `Login timed out after ${timeout} seconds. Please complete QR code scanning or manual login in the browser window.`,
                 {
@@ -113,40 +110,17 @@ export class AuthService extends BaseService {
         await this.getBrowserManager().saveCookiesFromPage(page);
 
         // Verify login success and get profile information
-        await sleep(1000); // Brief wait for page to update
+        await sleep(1000);
         const loginStatus = await getLoginStatusWithProfile(page);
         if (loginStatus.isLoggedIn) {
-          // Try to get additional profile information
           let profile = loginStatus.profile;
           try {
-            // Find current user's profile link and extract user ID from URL
-            const profileUrl = await page.evaluate(() => {
-              const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-              const currentUserLink = userLinks.find((link) => {
-                const text = link.textContent?.trim();
-                return (
-                  text === '我' ||
-                  (text && text.includes('profile')) ||
-                  (text && text.includes('用户'))
-                );
-              });
-              return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
-            });
-
-            if (profileUrl) {
-              // Extract user ID from profile URL
-              const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
-              if (userIdMatch) {
-                profile = {
-                  ...profile,
-                  userId: userIdMatch[1],
-                  profileUrl: profileUrl,
-                };
-              }
+            const extracted = await this.extractProfileFromPage(page);
+            if (extracted) {
+              profile = { ...profile, ...extracted };
             }
           } catch (profileError) {
             logger.warn('Failed to get additional profile information:', profileError);
-            // Continue with existing profile info
           }
 
           return {
@@ -209,9 +183,8 @@ export class AuthService extends BaseService {
 
       try {
         await this.getBrowserManager().navigateWithRetry(page, this.getConfig().xhs.exploreUrl);
-        await sleep(1000); // Wait for page to load
+        await sleep(1000);
 
-        // First check if logged in
         const loggedIn = await isLoggedIn(page);
 
         if (!loggedIn) {
@@ -223,37 +196,7 @@ export class AuthService extends BaseService {
           };
         }
 
-        // If logged in, try to get profile information
-        let profile: any = undefined;
-        try {
-          // Find current user's profile link and extract user ID from URL
-          const profileUrl = await page.evaluate(() => {
-            const userLinks = Array.from(document.querySelectorAll('a[href*="/user/profile/"]'));
-            const currentUserLink = userLinks.find((link) => {
-              const text = link.textContent?.trim();
-              return (
-                text === '我' ||
-                (text && text.includes('profile')) ||
-                (text && text.includes('用户'))
-              );
-            });
-            return currentUserLink ? (currentUserLink as HTMLAnchorElement).href : null;
-          });
-
-          if (profileUrl) {
-            // Extract user ID from profile URL
-            const userIdMatch = profileUrl.match(/\/user\/profile\/([a-f0-9]+)/);
-            if (userIdMatch) {
-              profile = {
-                userId: userIdMatch[1],
-                profileUrl: profileUrl,
-              };
-            }
-          }
-        } catch (profileError) {
-          console.error('❌ Failed to get profile information:', profileError);
-          // Continue without profile info
-        }
+        const profile = await this.extractProfileFromPage(page);
 
         return {
           success: true,
