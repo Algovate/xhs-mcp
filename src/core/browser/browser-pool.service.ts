@@ -39,6 +39,7 @@ export interface BrowserPoolOptions {
   maxAge?: number;
   healthCheckInterval?: number;
   maxUsageCount?: number;
+  stuckTimeout?: number;
 }
 
 export class BrowserPoolService {
@@ -53,13 +54,15 @@ export class BrowserPoolService {
     this.config = config || getConfig();
 
     // Set default options with configuration from environment or defaults
+    const idleTimeout = options?.idleTimeout ?? 300000;
     this.options = {
       minInstances: options?.minInstances ?? 2,
       maxInstances: options?.maxInstances ?? 5,
-      idleTimeout: options?.idleTimeout ?? 300000, // 5 minutes
+      idleTimeout,
       maxAge: options?.maxAge ?? 1800000, // 30 minutes
       healthCheckInterval: options?.healthCheckInterval ?? 60000, // 1 minute
       maxUsageCount: options?.maxUsageCount ?? 100,
+      stuckTimeout: options?.stuckTimeout ?? 600000, // 10 minutes
     };
 
     this.startHealthMonitoring();
@@ -122,6 +125,14 @@ export class BrowserPoolService {
     const managedBrowser = this.pool.get(browser.id);
     if (!managedBrowser) {
       logger.warn(`Attempted to release unknown browser ${browser.id}`);
+      return;
+    }
+
+    // If idleTimeout <= 0, close browser immediately instead of returning to pool
+    if (this.options.idleTimeout <= 0) {
+      logger.debug(`Browser ${browser.id} released with idleTimeout=0, closing immediately`);
+      await this.removeBrowserFromPool(browser.id);
+      await this.ensureMinimumInstances();
       return;
     }
 
@@ -434,7 +445,7 @@ export class BrowserPoolService {
   }
 
   /**
-   * Start cleanup monitoring for idle browsers
+   * Start cleanup monitoring for idle and stuck browsers
    */
   private startCleanupMonitoring(): void {
     this.cleanupTimer = setInterval(async () => {
@@ -446,28 +457,55 @@ export class BrowserPoolService {
       const browsersToRemove: string[] = [];
 
       for (const [id, browser] of this.pool.entries()) {
-        if (!browser.isAvailable) {
-          continue; // Skip browsers currently in use
-        }
-
         const idleTime = now - browser.lastUsed.getTime();
         const shouldRetire = this.shouldRetireBrowser(browser);
 
-        if (idleTime > this.options.idleTimeout || shouldRetire) {
-          // Only remove if we have more than minimum instances
+        // Also check stuck browsers (busy but stuck timeout exceeded)
+        // These are usually caused by unhandled exceptions preventing releaseBrowser from being called
+        const isStuck = !browser.isAvailable && idleTime > this.options.stuckTimeout;
+
+        if (idleTime > this.options.idleTimeout || shouldRetire || isStuck) {
           const healthyCount = Array.from(this.pool.values()).filter((b) => b.isHealthy).length;
 
-          if (healthyCount > this.options.minInstances) {
+          // Force removal for stuck browsers (don't check minimum instance count)
+          // Otherwise only remove if above minimum instances
+          if (isStuck || healthyCount > this.options.minInstances) {
             browsersToRemove.push(id);
           }
         }
       }
 
-      // Remove idle/old browsers
+      // Remove idle/old/stuck browsers
       for (const id of browsersToRemove) {
-        const reason = this.shouldRetireBrowser(this.pool.get(id)!) || 'idle timeout';
+        const browser = this.pool.get(id);
+        const isStuck = browser && !browser.isAvailable;
+        const reason = this.shouldRetireBrowser(browser!) || (isStuck ? 'stuck browser timeout' : 'idle timeout');
         logger.info(`Removing browser ${id} due to ${reason}`);
+
+        // For stuck browsers, try to close any open pages first
+        if (isStuck && browser) {
+          try {
+            const pages = await browser.context.pages();
+            for (const p of pages) {
+              try {
+                if (!p.isClosed()) {
+                  await p.close();
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
         await this.removeBrowserFromPool(id);
+      }
+
+      // Ensure minimum instances after cleanup only if browsers were removed
+      if (browsersToRemove.length > 0) {
+        await this.ensureMinimumInstances();
       }
     }, this.options.healthCheckInterval);
   }

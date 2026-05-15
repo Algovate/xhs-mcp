@@ -9,20 +9,24 @@ import { getConfig } from '../../shared/config';
 import { loadCookies, saveCookies } from '../../shared/cookies';
 import { logger } from '../../shared/logger';
 import { sleep } from '../../shared/utils';
-import { BrowserPoolService, ManagedBrowser } from './browser-pool.service';
+import { BrowserPoolService, ManagedBrowser, BrowserPoolOptions } from './browser-pool.service';
 
 export class BrowserManager {
   private config: Config;
   private browser: Browser | null = null;
   private browserPool: BrowserPoolService | null = null;
   private usePool: boolean = false;
+  private poolOptions?: BrowserPoolOptions;
+  private trackedPages: Set<Page> = new Set();
+  private maxTrackedPages: number = 10;
 
-  constructor(config?: Config, usePool: boolean = false) {
+  constructor(config?: Config, usePool: boolean = false, poolOptions?: BrowserPoolOptions) {
     this.config = config || getConfig();
     this.usePool = usePool;
+    this.poolOptions = poolOptions;
 
     if (this.usePool) {
-      this.browserPool = new BrowserPoolService(this.config);
+      this.browserPool = new BrowserPoolService(this.config, poolOptions);
     }
   }
 
@@ -45,6 +49,18 @@ export class BrowserManager {
 
       // Create new page
       const page = await this.browser.newPage();
+
+      // Track page for cleanup
+      this.trackedPages.add(page);
+      page.once('close', () => {
+        this.trackedPages.delete(page);
+      });
+
+      // Auto-cleanup if too many pages are open (leak detection)
+      if (this.trackedPages.size > this.maxTrackedPages) {
+        logger.warn(`Tracked pages (${this.trackedPages.size}) exceeds threshold (${this.maxTrackedPages}), forcing cleanup`);
+        await this.closeAllPages();
+      }
 
       // Configure page timeouts
       page.setDefaultTimeout(this.config.browser.defaultTimeout);
@@ -89,13 +105,18 @@ export class BrowserManager {
       (page as Page & { _managedBrowser?: ManagedBrowser })._managedBrowser = managedBrowser;
 
       // Set up page close handler to release browser back to pool
-      page.once('close', async () => {
+      let released = false;
+      const releaseBrowser = async () => {
+        if (released) return;
+        released = true;
         try {
           await this.browserPool!.releaseBrowser(managedBrowser);
         } catch (error) {
           logger.warn(`Error releasing browser back to pool: ${error}`);
         }
-      });
+      };
+
+      page.once('close', releaseBrowser);
 
       return page;
     } catch (error) {
@@ -268,6 +289,9 @@ export class BrowserManager {
       }
     }
 
+    // Close all tracked pages before closing browser
+    await this.closeAllPages();
+
     // Cleanup traditional browser instance
     if (this.browser) {
       try {
@@ -281,6 +305,24 @@ export class BrowserManager {
   }
 
   /**
+   * Close all tracked pages that are still open
+   */
+  async closeAllPages(): Promise<void> {
+    const closePromises: Promise<void>[] = [];
+    for (const page of this.trackedPages) {
+      if (!page.isClosed()) {
+        closePromises.push(
+          page.close().catch((error) => {
+            logger.warn(`Error closing tracked page: ${error}`);
+          })
+        );
+      }
+    }
+    await Promise.allSettled(closePromises);
+    this.trackedPages.clear();
+  }
+
+  /**
    * Get browser pool statistics (if using pool)
    */
   getBrowserPoolStats() {
@@ -291,12 +333,19 @@ export class BrowserManager {
   }
 
   /**
+   * Get the number of tracked pages (for monitoring leaks)
+   */
+  getTrackedPageCount(): number {
+    return this.trackedPages.size;
+  }
+
+  /**
    * Enable browser pooling
    */
   enableBrowserPool(): void {
     if (!this.usePool) {
       this.usePool = true;
-      this.browserPool = new BrowserPoolService(this.config);
+      this.browserPool = new BrowserPoolService(this.config, this.poolOptions);
     }
   }
 
