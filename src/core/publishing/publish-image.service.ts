@@ -49,31 +49,13 @@ export class ImagePublishService extends PublishBaseService {
         );
 
         // Wait for page to load
-        await sleep(3000);
+        await sleep(2000);
 
         // First, try to switch to the image/text upload tab
         await this.clickUploadTab(page);
 
         // Wait for tab switch to complete
-        await sleep(3000);
-
-        // Check if tab switch was successful and retry if needed
-        const pageState = await page.evaluate(() => {
-          return {
-            buttonTexts: Array.from(document.querySelectorAll('button, div[role="button"]'))
-              .map((el: Element) => el.textContent?.trim())
-              .filter((t: string | undefined) => t),
-          };
-        });
-
-        // If still showing video upload, try clicking the tab again
-        if (
-          pageState.buttonTexts.includes('上传视频') &&
-          !pageState.buttonTexts.includes('上传图文')
-        ) {
-          await this.clickUploadTab(page);
-          await sleep(3000);
-        }
+        await sleep(2000);
 
         let hasUploadContainer = await this.getBrowserManager().tryWaitForSelector(
           page,
@@ -111,8 +93,8 @@ export class ImagePublishService extends PublishBaseService {
         await this.uploadImages(page, resolvedPaths);
 
         // Wait for images to be processed (large files need more time on XHS)
-        logger.debug('Waiting 15 seconds for images to be uploaded and processed...');
-        await sleep(15000);
+        logger.debug('Waiting 10 seconds for images to be uploaded and processed...');
+        await sleep(10000);
 
         // Wait for page to transition to edit mode (check for title or content input)
         try {
@@ -125,13 +107,13 @@ export class ImagePublishService extends PublishBaseService {
         }
 
         // Wait a bit for the page to settle after image upload
-        await sleep(2000);
+        await sleep(1000);
 
         // Fill in title
         await this.fillTitle(page, title);
 
         // Wait a bit more for content area to appear
-        await sleep(2000);
+        await sleep(1000);
 
         // Fill in content
         await this.fillContent(page, content);
@@ -212,52 +194,57 @@ export class ImagePublishService extends PublishBaseService {
 
   private async clickUploadTab(page: Page): Promise<void> {
     try {
-      logger.debug('Attempting to switch to "上传图文" tab using Puppeteer outer native click');
+      logger.debug('Attempting to switch to "上传图文" tab');
 
-      // Wait for tabs to render
-      await page.waitForSelector('.creator-tab', { timeout: 10000 });
+      // Strategy 1: Navigate directly to image publish URL
+      const imagePublishUrl = 'https://creator.xiaohongshu.com/publish/publish?source=official&from=menu&target=image';
+      await page.goto(imagePublishUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      logger.debug(`Navigated directly to image publish URL: ${imagePublishUrl}`);
+      await sleep(2000);
 
-      const tabs = await page.$$('.creator-tab');
-      let clicked = false;
+      // Verify we're on the image tab by checking page content
+      const pageState = await page.evaluate(() => {
+        const bodyText = document.body?.textContent || '';
+        return {
+          hasImageUpload: bodyText.includes('上传图文') || bodyText.includes('拖拽图片'),
+          hasVideoUpload: bodyText.includes('上传视频') || bodyText.includes('拖拽视频'),
+          url: window.location.href,
+        };
+      });
+      logger.debug(`Page state after navigation: ${JSON.stringify(pageState)}`);
 
-      for (const tab of tabs) {
-        const text = await tab.evaluate(el => el.textContent);
-        if (text && (text.includes('上传图文') || text.includes('图文'))) {
+      if (!pageState.hasImageUpload && pageState.hasVideoUpload) {
+        logger.warn('Still on video upload page after navigation. Trying tab click...');
 
-          const isVisible = await tab.isIntersectingViewport();
-          if (!isVisible) {
-            logger.debug('Found a matching tab, but it is not visible in the viewport. Skipping...');
-            continue; // Skip hidden elements
+        // Strategy 2: Click the image tab explicitly
+        const tabs = await page.$$('div[class*="tab"], .creator-tab, [role="tab"]');
+        for (const tab of tabs) {
+          const text = await tab.evaluate(el => el.textContent?.trim());
+          if (text && (text.includes('上传图文') || text.includes('图文'))) {
+            const isVisible = await tab.isIntersectingViewport().catch(() => false);
+            if (!isVisible) continue;
+
+            // Full event chain for React
+            await tab.evaluate((el) => {
+              const htmlEl = el as HTMLElement;
+              const events = ['mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'];
+              events.forEach(ev => {
+                htmlEl.dispatchEvent(new MouseEvent(ev, { bubbles: true, cancelable: true }));
+              });
+            });
+            await sleep(500);
+
+            await tab.click();
+            logger.debug('Clicked image tab via Puppeteer');
+            await sleep(1000);
+            break;
           }
-
-          // Try native click first
-          try {
-            await (tab as any).click({ delay: 150 });
-            logger.debug('Native Puppeteer click succeeded on tab.');
-          } catch (e) {
-            logger.debug(`Puppeteer native click failed on visible tab: ${e}`);
-          }
-          await sleep(500);
-
-          // Force a secondary click on the text itself via evaluate just in case hit area missed
-          await tab.evaluate((el) => {
-            const span = el.querySelector('span') || el;
-            (span as HTMLElement).click();
-          });
-
-          clicked = true;
-          logger.debug('Successfully clicked image tab text match.');
-          break;
         }
       }
 
-      if (!clicked) {
-        logger.warn('Could not find visible image tab via textual matching.');
-      }
-
-      await sleep(2000);
+      await sleep(1000);
     } catch (error) {
-      logger.warn(`Failed to click upload tab: ${error}`);
+      logger.warn(`Failed to switch to image tab: ${error}`);
     }
   }
 
@@ -288,7 +275,7 @@ export class ImagePublishService extends PublishBaseService {
         }
       }, fileInput);
 
-      await sleep(15000);
+      await sleep(8000);
     } catch (error) {
       throw new PublishError(`Failed to upload images: ${error}`);
     }
