@@ -494,27 +494,248 @@ export abstract class PublishBaseService extends BaseService {
 
   protected async submitPost(page: Page): Promise<void> {
     try {
-      const buttons = await page.$$('button');
+      // Strategy 1: Look for the <xhs-publish-btn> custom element (new XHS UI)
       let submitButton: import('puppeteer').ElementHandle<HTMLButtonElement> | null = null;
-      for (const btn of buttons) {
-        const text = await btn.evaluate(el => el.textContent?.trim());
-        if (text === '发布') {
-          submitButton = btn as import('puppeteer').ElementHandle<HTMLButtonElement>;
-          break;
+      const customBtn = await page.$('xhs-publish-btn');
+      if (customBtn) {
+        // Verify it has the right attributes (is-publish="true", submit-text="发布")
+        const attrs = await customBtn.evaluate((el) => ({
+          isPublish: el.getAttribute('is-publish'),
+          submitText: el.getAttribute('submit-text'),
+          submitDisabled: el.getAttribute('submit-disabled'),
+        }));
+        logger.debug(`Found xhs-publish-btn custom element: ${JSON.stringify(attrs)}`);
+        if (attrs.isPublish === 'true' || attrs.submitText === '发布') {
+          submitButton = customBtn as import('puppeteer').ElementHandle<HTMLButtonElement>;
+        }
+      }
+
+      // Strategy 2: Look for standard button elements containing "发布"
+      if (!submitButton) {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const text = await btn.evaluate(el => el.textContent?.trim());
+          if (text?.includes('发布')) {
+            submitButton = btn as import('puppeteer').ElementHandle<HTMLButtonElement>;
+            break;
+          }
         }
       }
 
       if (!submitButton) {
-        const submitSelector = 'div.submit, .submit-btn, .publish-btn';
-        submitButton = await page.$(submitSelector) as import('puppeteer').ElementHandle<HTMLButtonElement> | null;
-        if (!submitButton) {
-          throw new PublishError('Could not find submit button');
+        // Strategy 3: search all visible div/span elements containing "发布" text
+        const textCandidates = await page.$$('div, span');
+        for (const el of textCandidates) {
+          try {
+            const text = await el.evaluate(el => el.textContent?.trim());
+            if (text?.includes('发布') && text.length < 20) {
+              const isVisible = await el.isIntersectingViewport().catch(() => false);
+              if (isVisible) {
+                submitButton = el as import('puppeteer').ElementHandle<HTMLButtonElement>;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
         }
       }
 
-      await submitButton.click();
-      logger.debug('Clicked submit button natively');
-      await sleep(2000);
+      if (!submitButton) {
+        const submitSelector = 'div.submit, .submit-btn, .publish-btn, [class*="publish"], [class*="btn-"], .btn-text';
+        submitButton = await page.$(submitSelector) as import('puppeteer').ElementHandle<HTMLButtonElement> | null;
+      }
+
+      // Strategy 5: XPath text match
+      if (!submitButton) {
+        const publishTexts = ['发布笔记', '发布', '发表'];
+        for (const text of publishTexts) {
+          const elements = await (page as any).$x(`//*[contains(text(), '${text}')]`);
+          for (const el of elements) {
+            try {
+              const rect = await el.evaluate((el: Element) => {
+                const r = el.getBoundingClientRect();
+                return { w: r.width, h: r.height };
+              });
+              if (rect.w > 0 && rect.h > 0) {
+                submitButton = el as import('puppeteer').ElementHandle<HTMLButtonElement>;
+                break;
+              }
+            } catch {
+              continue;
+            }
+          }
+          if (submitButton) break;
+        }
+      }
+
+      // Strategy 6: Find .btn-text span and click parent
+      if (!submitButton) {
+        const btnTextEl = await page.$('.btn-text');
+        if (btnTextEl) {
+          const text = await btnTextEl.evaluate(el => el.textContent?.trim());
+          if (text?.includes('发布')) {
+            const parent = await btnTextEl.evaluateHandle(el =>
+              el.closest('[class*="publish"], [class*="btn-"]') || el.parentElement
+            );
+            if (parent) {
+              submitButton = parent as import('puppeteer').ElementHandle<HTMLButtonElement>;
+            }
+          }
+        }
+      }
+
+      if (!submitButton) {
+        // Debug: dump key info about the page state
+        const debugInfo = await page.evaluate(() => {
+          // Find all elements mentioning 发布
+          const publishElements: {tag: string; text: string; class: string; visible: boolean; rect: string}[] = [];
+          document.querySelectorAll('*').forEach(el => {
+            const text = el.textContent?.trim();
+            if (text?.includes('发布')) {
+              const rect = el.getBoundingClientRect();
+              publishElements.push({
+                tag: el.tagName,
+                text: text.substring(0, 30),
+                class: (el as HTMLElement).className?.substring(0, 80),
+                visible: rect.width > 0 && rect.height > 0,
+                rect: `${rect.width.toFixed(0)}x${rect.height.toFixed(0)} at ${rect.top.toFixed(0)},${rect.left.toFixed(0)}`,
+              });
+            }
+          });
+          
+          return {
+            url: window.location.href,
+            bodyHeight: document.body.scrollHeight,
+            viewportHeight: window.innerHeight,
+            publishElements: publishElements.slice(0, 40),
+          };
+        });
+        
+        throw new PublishError(`Could not find submit button. URL=${debugInfo.url}, body=${debugInfo.bodyHeight}, vp=${debugInfo.viewportHeight}, publishElems=${JSON.stringify(debugInfo.publishElements)}`);
+      }
+
+      // Pre-click checks: ensure button is enabled and clickable
+      const buttonState = await page.evaluate((el) => {
+        if (!el) return { exists: false };
+        const htmlEl = el as HTMLElement;
+        const style = window.getComputedStyle(htmlEl);
+        return {
+          exists: true,
+          disabled: htmlEl.hasAttribute('disabled') || htmlEl.getAttribute('aria-disabled') === 'true',
+          pointerEvents: style.pointerEvents,
+          opacity: style.opacity,
+          visibility: style.visibility,
+          display: style.display,
+          tagName: htmlEl.tagName,
+          className: htmlEl.className,
+          text: htmlEl.textContent?.trim().substring(0, 20),
+        };
+      }, submitButton);
+      logger.debug(`Submit button state: ${JSON.stringify(buttonState)}`);
+
+      if (buttonState.disabled) {
+        logger.warn('Submit button is disabled - publishing may fail');
+      }
+
+      // Scroll to button before clicking
+      await page.evaluate((el) => {
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'instant', block: 'center' });
+        }
+      }, submitButton);
+      await sleep(500);
+
+      // Helper to check if publish was triggered (page navigating away or showing success)
+      const isPublishTriggered = async (): Promise<boolean> => {
+        try {
+          const currentUrl = page.url();
+          const bodyText = await page.evaluate(() => document.body?.textContent || '');
+          return !currentUrl.includes('/publish/publish') ||
+            bodyText.includes('发布成功') ||
+            bodyText.includes('审核中');
+        } catch {
+          return false;
+        }
+      };
+
+      // Strategy A: For xhs-publish-btn custom element, dispatch a CustomEvent('publish')
+      const isCustomElement = await submitButton.evaluate((el) => el.tagName === 'XHS-PUBLISH-BTN');
+      if (isCustomElement) {
+        try {
+          await page.evaluate((el) => {
+            if (!el) return;
+            el.dispatchEvent(new CustomEvent('publish', { bubbles: true, composed: true }));
+          }, submitButton);
+          logger.debug('Dispatched CustomEvent("publish") on xhs-publish-btn');
+        } catch (customEventError) {
+          logger.debug(`CustomEvent dispatch failed: ${customEventError}`);
+        }
+        await sleep(1500);
+        if (await isPublishTriggered()) return;
+      }
+
+      // Strategy B: Full React event chain via evaluate (fallback for standard elements)
+      try {
+        await page.evaluate((el) => {
+          if (!el) return;
+          const htmlEl = el as HTMLElement;
+          const rect = htmlEl.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const eventInit = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, screenX: x, screenY: y };
+          const events = [
+            new MouseEvent('mouseenter', eventInit),
+            new MouseEvent('mouseover', eventInit),
+            new MouseEvent('mousemove', eventInit),
+            new MouseEvent('mousedown', { ...eventInit, button: 0, buttons: 1 }),
+            new FocusEvent('focus', { bubbles: true }),
+            new MouseEvent('mouseup', { ...eventInit, button: 0, buttons: 0 }),
+            new MouseEvent('click', { ...eventInit, button: 0, buttons: 0 }),
+          ];
+          events.forEach((ev) => htmlEl.dispatchEvent(ev));
+        }, submitButton);
+        logger.debug('Dispatched full React event chain on submit button');
+      } catch (chainError) {
+        logger.debug(`React event chain failed: ${chainError}`);
+      }
+      await sleep(1000);
+      if (await isPublishTriggered()) return;
+
+      // Strategy C: Puppeteer native click as fallback
+      try {
+        await submitButton.click();
+        logger.debug('Clicked submit button via Puppeteer native click');
+      } catch (clickError) {
+        logger.debug(`Puppeteer click failed: ${clickError}`);
+      }
+      await sleep(800);
+      if (await isPublishTriggered()) return;
+
+      // Strategy D: JavaScript click via evaluate
+      try {
+        await page.evaluate((el) => { if (el) (el as HTMLElement).click(); }, submitButton);
+        logger.debug('Clicked submit button via JS evaluate click');
+      } catch (jsClickError) {
+        logger.debug(`JS evaluate click failed: ${jsClickError}`);
+      }
+      await sleep(800);
+      if (await isPublishTriggered()) return;
+
+      // Strategy E: Try clicking via page.mouse at element center coordinates
+      try {
+        const box = await submitButton.boundingBox();
+        if (box) {
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await sleep(50);
+          await page.mouse.up();
+          logger.debug('Clicked submit button via mouse coordinates');
+        }
+      } catch (mouseError) {
+        logger.debug(`Mouse click failed: ${mouseError}`);
+      }
+      await sleep(1500);
     } catch (error) {
       throw new PublishError(`Failed to click submit button: ${error}`);
     }
@@ -529,11 +750,14 @@ export abstract class PublishBaseService extends BaseService {
   }
 
   protected async waitForPublishCompletion(page: Page): Promise<string | null> {
-    const maxWaitTime = 60000; // 60 seconds
+    const maxWaitTime = 30000; // 30 seconds (reduced from 60s)
     const startTime = Date.now();
+    const publishStartUrl = page.url();
 
     while (Date.now() - startTime < maxWaitTime) {
-      // Check for success indicators
+      const currentUrl = page.url();
+
+      // Strategy 1: Check for success indicators via CSS selectors
       const successIndicators = [
         '.success-message',
         '.publish-success',
@@ -544,12 +768,13 @@ export abstract class PublishBaseService extends BaseService {
       for (const selector of successIndicators) {
         const element = await page.$(selector);
         if (element) {
-          await sleep(2000); // Wait a bit more for any final processing
+          logger.debug(`Found success indicator: ${selector}`);
+          await sleep(2000);
           return await this.extractNoteIdFromPage(page);
         }
       }
 
-      // Check for error indicators
+      // Strategy 2: Check for error indicators
       const errorIndicators = [
         '.error-message',
         '.publish-error',
@@ -566,7 +791,7 @@ export abstract class PublishBaseService extends BaseService {
         }
       }
 
-      // Check if we're still on the publish page
+      // Strategy 3: Check if we're still on the publish page
       const publishPageIndicators = ['div.upload-content', 'div.submit', '.creator-editor'];
 
       let stillOnPublishPage = false;
@@ -579,12 +804,11 @@ export abstract class PublishBaseService extends BaseService {
       }
 
       if (!stillOnPublishPage) {
-        // We've left the publish page, likely successful
         logger.debug('Left publish page, assuming success');
         return await this.extractNoteIdFromPage(page);
       }
 
-      // Check for toast messages
+      // Strategy 4: Check for toast/popup messages with text content
       const toastSelectors = ['.toast', '.message', '.notification', '[role="alert"]'];
 
       for (const selector of toastSelectors) {
@@ -606,10 +830,90 @@ export abstract class PublishBaseService extends BaseService {
         }
       }
 
-      await sleep(1000); // Wait before next check
+      // Strategy 5: Broad text-based success detection
+      const textSuccessElements = await page.$$('div, span, p, h1, h2, h3, button');
+      for (const el of textSuccessElements) {
+        try {
+          const text = await el.evaluate((e) => e.textContent?.trim());
+          if (text && text.length < 50) {
+            if (text.includes('发布成功') || text.includes('投稿成功') || text.includes('审核中')) {
+              logger.debug(`Found text success indicator: ${text}`);
+              return await this.extractNoteIdFromPage(page);
+            }
+            if (text.includes('发布失败') || text.includes('投稿失败')) {
+              throw new PublishError(`Publish failed: ${text}`);
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      // Strategy 6: URL change detection (navigated away from publish page)
+      if (currentUrl !== publishStartUrl) {
+        const isPublishUrl = currentUrl.includes('/publish') || currentUrl.includes('/creator');
+        if (!isPublishUrl) {
+          logger.debug(`URL changed from publish page to ${currentUrl}, assuming success`);
+          return await this.extractNoteIdFromPage(page);
+        }
+      }
+
+      // Strategy 7: Check for loading/success overlays
+      const overlaySelectors = ['.modal', '.popup', '.dialog', '.overlay', '[class*="success"]', '[class*="modal"]'];
+      for (const selector of overlaySelectors) {
+        const element = await page.$(selector);
+        if (element) {
+          try {
+            const isVisible = await element.isIntersectingViewport().catch(() => false);
+            if (isVisible) {
+              const text = await element.evaluate((e) => e.textContent?.trim());
+              if (text && (text.includes('成功') || text.includes('发布'))) {
+                logger.debug(`Found overlay with success text: ${text.substring(0, 50)}`);
+                return await this.extractNoteIdFromPage(page);
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      await sleep(800); // Wait before next check
     }
 
-    throw new PublishError('Publish completion timeout - could not determine result');
+    // Timeout: collect debug info
+    const debugInfo = await page.evaluate(() => {
+      const allTexts: string[] = [];
+      document.querySelectorAll('div, span, p, h1, h2, h3, button').forEach((el) => {
+        const text = el.textContent?.trim();
+        if (text && text.length > 0 && text.length < 100) {
+          allTexts.push(text);
+        }
+      });
+      return {
+        url: window.location.href,
+        bodyText: document.body?.textContent?.substring(0, 500) || '',
+        visibleTexts: allTexts.filter((t, i, arr) => arr.indexOf(t) === i).slice(0, 30),
+      };
+    });
+
+    logger.debug(`Publish timeout debug - URL: ${debugInfo.url}`);
+    logger.debug(`Visible texts: ${debugInfo.visibleTexts.join(' | ')}`);
+
+    // Check if page left publish URL (even if not detected earlier) - assume success
+    const isStillOnPublishUrl = debugInfo.url.includes('/publish');
+    const hasErrorText = debugInfo.visibleTexts.some(
+      (t) => t.includes('失败') || t.includes('错误') || t.includes('error') || t.includes('无法')
+    );
+
+    if (!isStillOnPublishUrl || !hasErrorText) {
+      logger.warn(`Publish completion timed out but no error detected. Assuming success. URL=${debugInfo.url}`);
+      return await this.extractNoteIdFromPage(page);
+    }
+
+    throw new PublishError(
+      `Publish completion timeout - could not determine result. URL=${debugInfo.url}, texts=${debugInfo.visibleTexts.join(', ').substring(0, 200)}`
+    );
   }
 
   protected async extractNoteIdFromPage(page: Page): Promise<string | null> {

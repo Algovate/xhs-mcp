@@ -62,6 +62,10 @@ class CLIUtils {
     const compact = this.program.getOptionValue?.('compact') === true;
     const json = compact ? JSON.stringify(output) : JSON.stringify(output, null, 2);
     process.stdout.write(`${json}\n`);
+    // Flush stdout before exiting to ensure output is visible
+    if (process.stdout.writable) {
+      process.stdout.end();
+    }
     process.exit(exitCode);
   }
 
