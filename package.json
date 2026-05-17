@@ -1,6 +1,6 @@
 {
   "name": "xhs-mcp",
-  "version": "0.8.12",
+  "version": "0.8.13",
   "type": "module",
   "description": "XiaoHongShu CLI and MCP Server",
   "main": "dist/xhs-mcp.cjs",
