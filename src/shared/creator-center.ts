@@ -6,7 +6,8 @@ import { Page } from 'puppeteer';
 import { NotLoggedInError, XHSError } from './errors';
 import { sleep } from './utils';
 
-export const CREATOR_CENTER_URL = 'https://creator.xiaohongshu.com/new/note-manager?source=official';
+export const CREATOR_CENTER_URL =
+  'https://creator.xiaohongshu.com/new/note-manager?source=official';
 
 export async function navigateToCreatorCenter(page: Page): Promise<void> {
   try {
